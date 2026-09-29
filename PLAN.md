@@ -16,7 +16,7 @@ Submission: Prior Labs TabPFN-3.5 Hackathon (Sep–Oct 2026). Deployed on Vercel
 |---|---|
 | TabPFN integration | **Fully live.** Every prediction is a real TabPFN-3.5 API call through a small server-side proxy. There are no precomputed predictions. |
 | Token budget | **Cache + batch.** The first identical world request is computed live and its real response is reused. Player predictions are batched into one call per act, about 3 per playthrough (§4.5). |
-| Scope | **About 4 weeks of build time, a game of about 20 minutes** covering the whole day, morning to night. Deadline assumed to be **~Oct 27, 2026** (confirm). |
+| Scope | **6 days: build Sep 29 – Oct 5, submission deadline Oct 6.** **8 scenes, about 10 minutes of play**, covering the whole day, morning to evening. |
 | Story structure | **One linear day, plus replay.** The finale offers to let the phone run tomorrow using your learned thresholds (see §2.5). |
 | Art | **Kenney CC0 packs**: RPG Urban Pack, Roguelike Indoors, Tiny Town. 16×16 tiles. |
 | Engine / stack | Phaser 3, Vite and TypeScript for the game. Vercel Functions in TypeScript for the proxy. uv + Python for dataset generation. |
@@ -77,23 +77,23 @@ Each decision fills in a card with the spec's five questions. Some answers are o
 
 ## 3. The day: scenes, TabPFN tasks and examples from the book
 
-The game clock runs 06:30 → 21:00. Target is about 20 min of play. **P1** means required; **P2** means cut first if time runs short.
+The game clock runs 06:30 → 21:00. Target is about 10 min of play. **IN** means the scene is in the 6-day build. **CUT** means dropped when the deadline moved to Oct 6; **MERGED** means folded into another scene. The 8 IN scenes are 1, 2, 4, 6, 7, 8, 11 and 13.
 
-| # | Time | Place | Scene (old rule → prediction → judgment → ripple) | Book example | TabPFN task | Pri |
+| # | Time | Place | Scene (old rule → prediction → judgment → ripple) | Book example | TabPFN task | Status |
 |---|---|---|---|---|---|---|
-| 1 | 06:30 | Bedroom | Wake up and find the phone. Clouds outside the window. **Rule:** always pack umbrellas. **Predict:** chance of rain on the school run. **Judge:** set the dial ("take umbrellas if P ≥ __"). **Ripple:** wet kids, or Leo losing the umbrella, resolved later on the street. *Tutorial for the loop.* | Umbrella | Classification on **real** hourly weather history (Open-Meteo) | P1 |
-| 2 | 07:00 | Kids' room | Leo is sniffly: *"my head is hot and my tummy is grumpy"*. **Rule:** any symptom means he stays home, and you miss your big experiment day. **Predict:** P(contagious) from what he said, his temperature and the days since symptoms started. **Judge:** your threshold for sending him to school. **Sam** has a more cautious threshold, and if Leo stays home, one of you loses the day. The prediction doesn't settle the disagreement; it makes it explicit. **Ripple:** the school nurse applies *her* threshold, other parents text, and your manager's sick-day policy comes up. | COVID testing | **Text column** + numeric features → classification | P1 |
-| 3 | 07:20 | Kitchen | Breakfast. The doorbell rings: parcels the phone ordered overnight because it was 70% sure you'd need them. **Judge:** set the auto-order threshold. **Ripple:** a pile of returns grows in the hallway all day, and the courier jokes about the new business model. | Amazon ship-then-shop | Classification over household purchase history | P2 |
-| 4 | 07:45 | Street | School run. **Rule:** leave at 7:30, always 20 min early. **Predict:** commute-time *distribution* per route. **Judge:** what probability of being late is acceptable (typical time vs. worst case)? **Ripple:** the Parents' Café at the school gate, which lives off parents waiting around, is suddenly empty. Every parent's phone picked Route A, so Route A jams. There are roadworks on Route B: the city now digs where the model predicts lead pipes. | Airport timing (+ Flint hint) | **Regression, full distribution/quantiles** on a large traffic dataset (100K–1M rows) | P1 |
-| 5 | 08:10 | School gate | Drop-off. The nurse resolves scene 2. The teacher reminds you about **Mia's football final** this afternoon, and her ankle is still sore. The umbrella outcome resolves. | — | — (ripples) | P1 |
-| 6 | 09:00 | Office | Boot the Linux box (Omarchy / Hyprland tiling boot cutscene) and spin up Claude, which writes the training code in seconds. **Ripple:** the manager now wants 3× the experiments, and you have more to review, explain and coordinate. Automating one prediction didn't make the job simpler; it moved the work around. | Radiology | — (world-building) | P1 |
-| 7 | 09:30 | Office | **GPU allocation** (centrepiece). Colleagues propose experiments: scaling from 10K to 1M samples, text+tabular multimodal, efficient inference, time series. The phone ranks them by predicted gain from past runs. **Judge:** allocate by the ranking (efficient) or spread across teams (visibly fair)? Colleagues lobby and the manager may override. **Ripple:** at 15:00 the hit rate shows what each allocation bought, and who gained or lost influence. | Flint lead pipes | **Regression as a surrogate model** on synthetic scaling-law runs, plus ranking | P1 |
-| 8 | 12:00 | Canteen | The chef always orders 40 avocados, and you help her switch to a forecast. **Ripple:** waste drops, then the distributor calls, and then the farmer. The phone charts how order swings grow at each step up the chain. A better local decision makes the overall system worse. | AI bullwhip | **Time-series forecasting** (TabPFN-3.5 temporal) | P1 |
-| 9 | 13:00 | Office | A letter from your insurer: its model says your kitchen pipe is likely to leak. The choices are a higher premium, a sensor that shares your data, a paid plumber, or doing nothing. **Ripple:** resolves at home in the evening. | Home insurance | Classification (anomaly-style features from sensor readings) | P2 |
-| 10 | 15:00 | Office | Runs finish: predicted vs. actual, the calibration reveal, the paper deadline, and a "Reviewer 2" NPC. | (Flint payoff) | Calibration | P1 |
-| 11 | 16:30 | Sports field | **Mia's final.** The physio estimates the reinjury risk. Mia wants to play, the coach wants to win, you want her healthy, and Sam, calling in on video, sides with Mia. **Judge:** whose preferences set the threshold? The phone shows the decision tree. The prediction can't supply the answer. | Michael Jordan | Classification (small data) | P1 |
-| 12 | 18:30 | Home | Family dinner with Sam. The returns pile and the leak resolve, and you catch up on Messages. | — | — (ripples) | P2 |
-| 13 | 20:30 | Home | **Finale:** your hidden judgment made explicit, and "Shall I decide tomorrow for you?" (§2.5). | "Who has authority to choose?" | Player model | P1 |
+| 1 | 06:30 | Bedroom | Wake up and find the phone. Clouds outside the window. **Rule:** always pack umbrellas. **Predict:** chance of rain on the school run. **Judge:** set the dial ("take umbrellas if P ≥ __"). **Ripple:** wet kids, or Leo losing the umbrella, resolved later on the street. *Tutorial for the loop.* | Umbrella | Classification on **real** hourly weather history (Open-Meteo) || IN |
+| 2 | 07:00 | Kids' room | Leo is sniffly: *"my head is hot and my tummy is grumpy"*. **Rule:** any symptom means he stays home, and you miss your big experiment day. **Predict:** P(contagious) from what he said, his temperature and the days since symptoms started. **Judge:** your threshold for sending him to school. **Sam** has a more cautious threshold, and if Leo stays home, one of you loses the day. The prediction doesn't settle the disagreement; it makes it explicit. **Ripple:** the school nurse applies *her* threshold, other parents text, and your manager's sick-day policy comes up. | COVID testing | **Text column** + numeric features → classification || IN |
+| 3 | 07:20 | Kitchen | Breakfast. The doorbell rings: parcels the phone ordered overnight because it was 70% sure you'd need them. **Judge:** set the auto-order threshold. **Ripple:** a pile of returns grows in the hallway all day, and the courier jokes about the new business model. | Amazon ship-then-shop | Classification over household purchase history || CUT |
+| 4 | 07:45 | Street | School run. **Rule:** leave at 7:30, always 20 min early. **Predict:** commute-time *distribution* per route. **Judge:** what probability of being late is acceptable (typical time vs. worst case)? **Ripple:** the Parents' Café at the school gate, which lives off parents waiting around, is suddenly empty. Every parent's phone picked Route A, so Route A jams. There are roadworks on Route B: the city now digs where the model predicts lead pipes. | Airport timing (+ Flint hint) | **Regression, full distribution/quantiles** on a large traffic dataset (100K–1M rows) || IN |
+| 5 | 08:10 | School gate | Drop-off. The nurse resolves scene 2. The teacher reminds you about **Mia's football final** this afternoon, and her ankle is still sore. The umbrella outcome resolves. | — | — (ripples) || MERGED into 4 |
+| 6 | 09:00 | Office | Boot the Linux box (Omarchy / Hyprland tiling boot cutscene) and spin up Claude, which writes the training code in seconds. **Ripple:** the manager now wants 3× the experiments, and you have more to review, explain and coordinate. Automating one prediction didn't make the job simpler; it moved the work around. | Radiology | — (world-building) || IN |
+| 7 | 09:30 | Office | **GPU allocation** (centrepiece). Colleagues propose experiments: scaling from 10K to 1M samples, text+tabular multimodal, efficient inference, time series. The phone ranks them by predicted gain from past runs. **Judge:** allocate by the ranking (efficient) or spread across teams (visibly fair)? Colleagues lobby and the manager may override. **Ripple:** at 15:00 the hit rate shows what each allocation bought, and who gained or lost influence. | Flint lead pipes | **Regression as a surrogate model** on synthetic scaling-law runs, plus ranking || IN |
+| 8 | 12:00 | Canteen | The chef always orders 40 avocados, and you help her switch to a forecast. **Ripple:** waste drops, then the distributor calls, and then the farmer. The phone charts how order swings grow at each step up the chain. A better local decision makes the overall system worse. | AI bullwhip | **Time-series forecasting** (TabPFN-3.5 temporal) || IN |
+| 9 | 13:00 | Office | A letter from your insurer: its model says your kitchen pipe is likely to leak. The choices are a higher premium, a sensor that shares your data, a paid plumber, or doing nothing. **Ripple:** resolves at home in the evening. | Home insurance | Classification (anomaly-style features from sensor readings) || CUT |
+| 10 | 15:00 | Office | Runs finish: predicted vs. actual, the calibration reveal, the paper deadline, and a "Reviewer 2" NPC. | (Flint payoff) | Calibration || MERGED into 13 |
+| 11 | 16:30 | Sports field | **Mia's final.** The physio estimates the reinjury risk. Mia wants to play, the coach wants to win, you want her healthy, and Sam, calling in on video, sides with Mia. **Judge:** whose preferences set the threshold? The phone shows the decision tree. The prediction can't supply the answer. | Michael Jordan | Classification (small data) || IN |
+| 12 | 18:30 | Home | Family dinner with Sam. The returns pile and the leak resolve, and you catch up on Messages. | — | — (ripples) || CUT |
+| 13 | 20:30 | Home | **Finale:** your hidden judgment made explicit, and "Shall I decide tomorrow for you?" (§2.5). | "Who has authority to choose?" | Player model || IN |
 
 Heart-attack triage is left out because it is too heavy for the tone. Its lesson about false negatives vs. false positives is covered by scenes 2 and 11.
 
@@ -200,30 +200,21 @@ Outcomes in the game world are sampled from the same generators, so the phone is
 
 ---
 
-## 5. Milestones (Sep 29 → ~Oct 27)
+## 5. Milestones (Sep 29 → Oct 5, deadline Oct 6)
 
-**Week 1 (Sep 29 – Oct 5): Walking skeleton, deployed**
-- `git init`, public GitHub repo, Vite + Phaser + TS scaffold, Vercel project connected to the repo. Every push to `main` deploys to the play link.
-- **API spike:** measure end-to-end latency and token cost (`estimate_cost`) for the player model (30–60 rows) and for traffic (100K rows, cached fit). Choose `v3.5` or `v3.5-fast` for live calls based on the numbers. **This is a go/no-go check for the prefetch design.**
-- Proxy with validation and rate limiting. Bedroom map, movement, dialogue box, phone overlay.
-- Scene 1 (umbrella) working end to end through the full decision loop, with a live prediction, and deployed.
+The play link is live from day 1, and every push to `main` redeploys it.
 
-**Week 2 (Oct 6 – 12): Morning**
-- Home, street and school maps. Story engine, Judgment Card, Messages, JudgmentLog, sealed player predictions.
-- Dataset generators and the weather fetch. Scenes 2, 4 and 5.
+| Day | Date | Goal |
+|---|---|---|
+| 1 | Tue Sep 29 | ✅ API spike, REST client, proxy, real weather data, Phaser skeleton, **scene 1 (umbrella) live on Vercel** |
+| 2 | Wed Sep 30 | Kenney art + tilemaps, player sprite, Judgment Card, Messages, JudgmentLog. Home map (bedroom, kids' room, kitchen). **Scene 2 (sick Leo, text column).** |
+| 3 | Thu Oct 1 | Street/school map. Traffic dataset. **Scene 4 (school run + café, quantiles).** Umbrella and nurse outcomes resolve at the gate. |
+| 4 | Fri Oct 2 | Office map. **Scene 6 (Omarchy boot + Claude)**, **scene 7 (GPU allocation, surrogate model)**, **scene 8 (avocado bullwhip, forecasting).** |
+| 5 | Sat Oct 3 | Sports field. **Scene 11 (Mia's final).** Batched player model. **Scene 13 (finale):** hidden-judgment report, calibration, replay. |
+| 6 | Sun Oct 4 | Polish: audio (ZzFX), title/credits, pacing to ~10 min, full playtests, token-budget check, bug fixes. |
+| 7 | Mon Oct 5 | README with play link, credits (*Power and Prediction*, Kenney, Open-Meteo), optional gameplay video, submission. Oct 6 is the buffer. |
 
-**Week 3 (Oct 13 – 19): Work, the field, the finale**
-- Office and canteen maps, the Omarchy/Claude cutscene (6), GPU allocation (7), bullwhip (8), results (10), sports field (11).
-- Finale, the "hidden judgment" report, calibration plot, "How the phone works", and replay with autopilot.
-
-**Week 4 (Oct 20 – 26): Polish and submission**
-- P2 scenes as time allows (3, 9, 12). Audio, title screen, pacing to about 20 min, playtests.
-- Load-test the proxy against the rate limits and check hackathon credits.
-- README (play link, how it works, credits), a gameplay video (optional, about 2 min, recorded as a screen capture of the live build), submission. A buffer of about 2 days.
-
-**Testing:** unit tests for the story engine, outcome sampling, JudgmentLog, seal and proxy validation; seed tests for the dataset generators; a Playwright smoke run through the P1 path against the live API; a debug "jump to scene" menu for playtesting.
-
----
+**Testing:** `scripts/playtest.ts` drives a headless system Chromium through the build and screenshots it. It grows into the P1 smoke test. The type check and build run on every change.
 
 ## 6. Risks
 
@@ -235,10 +226,10 @@ Outcomes in the game world are sampled from the same generators, so the phone is
 | The theme reads as a lecture | Each lesson lands through a ripple (a text from the café owner, the farmer calling), not through narration. Keep dialogue short and funny. |
 | Key leak | The key exists only server-side, requests use an allowlist and schema checks, and nothing arbitrary is forwarded. |
 | Kenney art looks generic | A consistent palette, a recoloured protagonist, and the phone UI as the visual centrepiece. |
-| 13 scenes are too many | P1/P2 split. P2 scenes reuse maps and are cut first. |
+| 6 days is tight for 8 scenes | Scenes are data on top of one shared engine. The world is playable at the end of every day, and scene 8 is the first to cut if we slip. |
 
 ---
 
 ## 7. Open questions
 
-1. **Exact deadline.** The plan assumes ~Oct 27, 2026.
+None right now.

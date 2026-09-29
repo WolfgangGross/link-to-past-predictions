@@ -1,7 +1,7 @@
 // Week-1 spike: measure live TabPFN REST latency for the game's request shapes.
-// Run: npm run spike   (each prediction costs ≥ 10K tokens; this script makes 6)
+// Run: npm run spike   (each prediction costs >= 10K tokens; this script makes 6)
 
-import { TabPFNClient, type Row, type Cell, type Timings } from "../server/tabpfn.ts";
+import { TabPFNClient, type Row, type Cell, type Timings } from "../server/tabpfn.js";
 
 const client = new TabPFNClient({ apiKey: process.env.TABPFN_API_KEY ?? "" });
 

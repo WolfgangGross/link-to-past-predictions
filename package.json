@@ -3,6 +3,20 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "spike": "node --env-file=.env scripts/spike-tabpfn.ts"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "typecheck": "tsc",
+    "spike": "tsx --env-file=.env scripts/spike-tabpfn.ts",
+    "data:weather": "uv run --no-project data/build_weather.py"
+  },
+  "dependencies": {
+    "phaser": "^4.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.0",
+    "playwright-core": "^1.63.0",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.1"
   }
 }
