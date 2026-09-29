@@ -10,6 +10,12 @@ A tiny top-down adventure, in the spirit of *Zelda: A Link to the Past*, about o
 
 Built for the Prior Labs TabPFN-3.5 Hackathon, 2026.
 
+## Why this game
+
+A powerful prediction model for structured data now fits in your pocket, and you don't have to train it: give it the everyday data you already have (weather, symptoms, traffic, experiments, sales) and it predicts. That is incredibly useful in day-to-day life, but not by itself. A probability is not a decision. Judgment is what turns it into one, and that is what I wanted to show, playfully. On one side, the power of predictive models on ordinary tabular data. On the other, the implication: we have to rethink the decisions we make. Often the old heuristic or rule of thumb is still good enough, and we should keep it. But sometimes a prediction lets us gain something over it, and only if we say out loud what a miss and a false alarm each cost, and who pays.
+
+To make that tangible, nothing in the game is faked: every prediction you see is a real, live API call to TabPFN-3.5, made on the fly from the data of the scene you are in.
+
 ## The day
 
 Every scene follows the same loop: **old rule → prediction → your threshold → action → ripple**. The ripple lands on you and on other people. After each decision a Judgment Card answers the book's five questions: how bad is a miss, how bad is a false alarm, who bears it, who decides, and what relied on the old rule.
@@ -25,7 +31,6 @@ Every scene follows the same loop: **old rule → prediction → your threshold 
 | Mia's final | Michael Jordan playing injured | Small-data reinjury risk for the full game vs. the second half. Mia, the coach, Charles and you each have a line. |
 | Bedtime | who has authority to choose? | The report: your day, **your hidden judgment**. Then: *"Shall I decide tomorrow for you?"* |
 
-**The phone learns you.** Before each decision, TabPFN makes a **sealed guess** (rule or phone?) in context from your earlier judgments, including earlier days. It shows the SHA-256 commitment first and reveals the guess after you choose. Nothing is trained; your past is the context. On replay the phone remembers yesterday. If you let it, it re-applies yesterday's lines to a new day.
 
 ## How it works
 
