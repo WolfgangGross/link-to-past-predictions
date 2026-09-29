@@ -18,9 +18,11 @@ async function runResults(ui: UIScene): Promise<void> {
   ui.phone.showLines("RUNS FINISHED", [...lines, `Total: ${fmt(total)} pts`], "SPACE continue");
   await ui.phone.open();
   const expected =
-    gpu.expectedFunded !== undefined && gpu.expectedRule !== undefined
-      ? `Predicted beforehand: ${fmt(gpu.expectedFunded)} for your pick, ${fmt(gpu.expectedRule)} for one-per-team.`
-      : "Nobody predicted anything beforehand. Nobody can say what the other split would have found.";
+    gpu.expectedRule === undefined || gpu.expectedTop === undefined
+      ? "Nobody predicted anything beforehand. Nobody can say what another split would have found."
+      : gpu.asked
+        ? `Predicted beforehand: ${fmt(gpu.expectedFunded!)} for your pick, ${fmt(gpu.expectedRule)} for one-per-team.`
+        : `You never asked, but the phone had ranked them anyway: ${fmt(gpu.expectedRule)} for one-per-team, ${fmt(gpu.expectedTop)} for its top four.`;
   await ui.dialogue.say([`Petra: "The runs are in: ${fmt(total)} points in total."`, expected]);
   await ui.phone.close();
 }

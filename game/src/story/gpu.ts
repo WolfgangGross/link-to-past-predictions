@@ -111,7 +111,10 @@ async function fund(ids: string[], choice: "rule" | "prediction" | "no_signal"):
   );
   const expected = (set: string[]) =>
     result?.ok ? set.reduce((sum, id) => sum + result.rows[PROPOSALS.findIndex((p) => p.id === id)][0.5], 0) : undefined;
-  state.gpu = { funded: ids, gains, expectedFunded: expected(ids), expectedRule: expected(TEAM_PICKS) };
+  const top = result?.ok
+    ? [...PROPOSALS].sort((a, b) => result.rows[PROPOSALS.indexOf(b)][0.5] - result.rows[PROPOSALS.indexOf(a)][0.5]).slice(0, NODES).map((p) => p.id)
+    : [];
+  state.gpu = { funded: ids, gains, asked: choice === "prediction", expectedFunded: expected(ids), expectedRule: expected(TEAM_PICKS), expectedTop: expected(top) };
   logJudgment(
     { scene: "gpu", clock: "09:40", choice, action: ids.map((id) => PROPOSALS.find((p) => p.id === id)!.short).join(", "), costOn: "others" },
     CARD,

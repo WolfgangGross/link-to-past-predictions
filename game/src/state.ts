@@ -38,7 +38,7 @@ export const state = {
   schoolRun: undefined as { depart: number; route: string; arrive: number; late: boolean; herd: boolean } | undefined,
   bootDone: false,
   gpu: undefined as
-    | { funded: string[]; gains: Record<string, number>; expectedFunded?: number; expectedRule?: number }
+    | { funded: string[]; gains: Record<string, number>; asked: boolean; expectedFunded?: number; expectedRule?: number; expectedTop?: number }
     | undefined,
   avocados: undefined as { orders: number[] } | undefined,
   final: undefined as { minutes: number; risk?: number; reinjured: boolean; whose: string } | undefined,

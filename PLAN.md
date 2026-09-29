@@ -204,17 +204,17 @@ Outcomes in the game world are sampled from the same generators, so the phone is
 
 The play link is live from day 1, and every push to `main` redeploys it.
 
-| Day | Date | Goal |
-|---|---|---|
-| 1 | Tue Sep 29 | ✅ API spike, REST client, proxy, real weather data, Phaser skeleton, **scene 1 (umbrella) live on Vercel** |
-| 2 | Wed Sep 30 | Kenney art + tilemaps, player sprite, Judgment Card, Messages, JudgmentLog. Home map (bedroom, kids' room, kitchen). **Scene 2 (sick Leo, text column).** |
-| 3 | Thu Oct 1 | Street/school map. Traffic dataset. **Scene 4 (school run + café, quantiles).** Umbrella and nurse outcomes resolve at the gate. |
-| 4 | Fri Oct 2 | Office map. **Scene 6 (Omarchy boot + Claude)**, **scene 7 (GPU allocation, surrogate model)**, **scene 8 (avocado bullwhip, forecasting).** |
-| 5 | Sat Oct 3 | Sports field. **Scene 11 (Mia's final).** Batched player model. **Scene 13 (finale):** hidden-judgment report, calibration, replay. |
-| 6 | Sun Oct 4 | Polish: audio (ZzFX), title/credits, pacing to ~10 min, full playtests, token-budget check, bug fixes. |
-| 7 | Mon Oct 5 | README with play link, credits (*Power and Prediction*, Kenney, Open-Meteo), optional gameplay video, submission. Oct 6 is the buffer. |
+| Day | Date | Goal | Status |
+|---|---|---|---|
+| 1 | Tue Sep 29 | API spike, REST client, proxy, real weather data, Phaser skeleton, scene 1 | ✅ Done, **plus everything planned for days 2–5**: all 8 scenes, the evening report, replay and autopilot, and the player model with sealed guesses |
+| 2 | Wed Sep 30 | **Deploy to Vercel** (blocked on the Vercel GitHub App install). Full playtests by a human, pacing, dialogue polish. | |
+| 3 | Thu Oct 1 | Audio (ZzFX sound effects, a music loop), title/credits screen, small art polish (café sign, school sign) | |
+| 4 | Fri Oct 2 | Balance and variety for replay days 2–3 (vary proposals and Mia's ankle), edge cases (No signal paths), load and token check | |
+| 5 | Sat Oct 3 | Buffer / stretch goals | |
+| 6 | Sun Oct 4 | Final playtests, README screenshots, gameplay video | |
+| 7 | Mon Oct 5 | Submission (deadline Oct 6) | |
 
-**Testing:** `scripts/playtest.ts` drives a headless system Chromium through the build and screenshots it. It grows into the P1 smoke test. The type check and build run on every change.
+**Testing:** `scripts/playtest.ts` drives the real game in a headless system Chromium through the game's own UI state (`window.__game`), with live TabPFN calls. Three paths all pass through the whole day: the phone path, `--rule`, and `--autopilot` (into day 2). The type check and build run on every change.
 
 ## 6. Risks
 
