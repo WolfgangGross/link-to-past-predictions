@@ -6,7 +6,7 @@ A tiny top-down adventure, in the spirit of *Zelda: A Link to the Past*, about o
 > Every probability needs a threshold, and every threshold encodes someone's preferences.
 > — after *Power and Prediction* (Agrawal, Gans & Goldfarb)
 
-**Play:** _link coming with the Vercel deployment_ · about 10 minutes · keyboard (arrows/WASD, SPACE, TAB)
+**Play: https://link-to-past-predictions.vercel.app** · about 10 minutes · keyboard (arrows/WASD, SPACE, TAB)
 
 Built for the Prior Labs TabPFN-3.5 Hackathon, 2026.
 
