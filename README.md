@@ -1,6 +1,6 @@
 # A Link to Past Predictions
 
-A tiny top-down adventure, in the spirit of *Zelda: A Link to the Past*, about one day in the life of Ada, an ML engineer at Prior Labs in Freiburg. On her nightstand she finds the **Phone of Priors**: it runs on **TabPFN-3.5** and can predict almost anything from the past. It cannot tell her what to do.
+A tiny top-down adventure, in the spirit of *Zelda: A Link to the Past*, about one day in the life of Ada, an ML engineer at an ML Lab in Freiburg. On her nightstand she finds the **Phone of Priors**: it runs on **TabPFN-3.5** and can predict almost anything from the past. It cannot tell her what to do.
 
 > Prediction doesn't remove judgment; it makes hidden judgment explicit.
 > Every probability needs a threshold, and every threshold encodes someone's preferences.
