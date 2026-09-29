@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import { COLORS, HEIGHT, WIDTH, textStyle } from "../theme";
 import { CONFIRM, nextKey } from "../ui/keys";
+import { state } from "../state";
 
 export class TitleScene extends Phaser.Scene {
   constructor() {
@@ -14,6 +15,10 @@ export class TitleScene extends Phaser.Scene {
     this.add
       .text(cx, 170, "A day of predictions, and the judgment they need.", textStyle(8, COLORS.paper))
       .setOrigin(0.5);
+    if (state.day > 0) {
+      const note = state.autopilot ? "The phone will decide for you today." : "The phone remembers yesterday.";
+      this.add.text(cx, 206, `DAY ${state.day + 1}  -  ${note}`, textStyle(8, COLORS.rain)).setOrigin(0.5);
+    }
     const start = this.add.text(cx, 236, "PRESS SPACE", textStyle(8, COLORS.paper)).setOrigin(0.5);
     this.tweens.add({ targets: start, alpha: 0.2, duration: 600, yoyo: true, repeat: -1 });
     this.add

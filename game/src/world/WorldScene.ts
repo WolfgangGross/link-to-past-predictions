@@ -61,6 +61,7 @@ export class WorldScene extends Phaser.Scene {
     const walls = layer("walls");
     const wallDecor = layer("wallDecor");
     const furniture = layer("furniture");
+    const onTop = layer("top");
 
     const paint = (target: Phaser.Tilemaps.TilemapLayer, rows: string[]) =>
       rows.forEach((row, y) =>
@@ -72,7 +73,7 @@ export class WorldScene extends Phaser.Scene {
     paint(floor, def.floor);
     paint(walls, def.walls);
     for (const prop of def.props) {
-      const target = prop.wall ? wallDecor : prop.solid ? furniture : decor;
+      const target = prop.top ? onTop : prop.wall ? wallDecor : prop.solid ? furniture : decor;
       prop.tiles.forEach((row, dy) =>
         row.forEach((index, dx) => {
           if (index !== null) target.putTileAt(gid([prop.sheet, index]), prop.at[0] + dx, prop.at[1] + dy);
@@ -81,6 +82,12 @@ export class WorldScene extends Phaser.Scene {
     }
     walls.setCollisionByExclusion([-1]);
     furniture.setCollisionByExclusion([-1]);
+    if (def.markings) {
+      const g = this.add.graphics().setDepth(decor.depth + 0.5).lineStyle(1, 0xffffff, 0.85);
+      for (const [x1, y1, x2, y2] of def.markings.lines ?? []) g.lineBetween(x1 * TILE, y1 * TILE, x2 * TILE, y2 * TILE);
+      for (const [x, y, r] of def.markings.circles ?? []) g.strokeCircle(x * TILE, y * TILE, r * TILE);
+      for (const [x, y, w, h] of def.markings.rects ?? []) g.strokeRect(x * TILE, y * TILE, w * TILE, h * TILE);
+    }
 
     this.physics.world.setBounds(0, 0, width * TILE, height * TILE);
     const [sx, sy] = def.spawn.at;
@@ -92,6 +99,7 @@ export class WorldScene extends Phaser.Scene {
     for (const n of def.npcs) {
       const sprite = this.physics.add.sprite((n.at[0] + 0.5) * TILE, (n.at[1] + 0.5) * TILE, "urban-sprites", charFrame(n.who, n.facing));
       sprite.setScale(n.scale ?? 1).setImmovable(true).setSize(10, 7).setOffset(3, 9);
+      if (n.tint !== undefined) sprite.setTint(n.tint);
       (sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
       this.physics.add.collider(this.player, sprite);
       this.npcs.set(n.id, { sprite, who: n.who });

@@ -23,6 +23,11 @@ export class Dialogue {
     this.box = scene.add.container(BOX.x, BOX.y, [bg, this.text, this.more]).setDepth(100).setVisible(false);
   }
 
+  /** Autopilot: returns the option to pick without asking, or undefined to ask the player. */
+  autopick?: (prompt: string, options: string[]) => number | undefined;
+  /** Called with every answered menu, so tomorrow's autopilot can replay it. */
+  onChoice?: (prompt: string, index: number) => void;
+
   /** For the playtest script: what the box is waiting for. */
   mode: "closed" | "typing" | "line" | "choice" = "closed";
 
@@ -46,6 +51,16 @@ export class Dialogue {
     this.box.setVisible(true);
     this.more.setVisible(false);
     await this.type(prompt);
+    const auto = this.autopick?.(prompt, options);
+    if (auto !== undefined && auto < options.length) {
+      this.text.setText([prompt, "", `> ${options[auto]}`, "", "(The phone chose for you, with your lines from yesterday.)"].join("\n"));
+      this.mode = "line";
+      await nextKey(this.scene, CONFIRM);
+      this.box.setVisible(false);
+      this.mode = "closed";
+      this.onChoice?.(prompt, auto);
+      return auto;
+    }
     let selected = 0;
     const render = () =>
       this.text.setText(
@@ -61,6 +76,7 @@ export class Dialogue {
     }
     this.box.setVisible(false);
     this.mode = "closed";
+    this.onChoice?.(prompt, selected);
     return selected;
   }
 

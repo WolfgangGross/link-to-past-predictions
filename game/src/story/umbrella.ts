@@ -6,6 +6,7 @@ import { logJudgment, pct, state, today, type JudgmentCard } from "../state";
 import type { UIScene } from "../scenes/UIScene";
 import { prefetchLeo } from "./leo";
 import { prefetchTraffic } from "./schoolRun";
+import { sealGuesses } from "../predict/player";
 
 const BASE_RATE = 0.195; // share of rainy school runs in the training data
 
@@ -39,15 +40,20 @@ export function prefetchRain(): void {
 }
 
 export async function pickUpPhone(ui: UIScene): Promise<void> {
-  await ui.dialogue.say([
-    "Something on the nightstand is glowing...",
-    "A phone? It isn't yours. The screen reads: IT'S DANGEROUS TO GO ALONE! TAKE THIS.",
-    "You got the PHONE OF PRIORS! It knows the past. It predicts. It does not decide.",
-    "(Press TAB to look at it.)",
-  ]);
+  await ui.dialogue.say(
+    state.day > 0
+      ? ["The phone is where you left it.", '"Good morning, Ada. I remember yesterday."', "(Press TAB to look at it.)"]
+      : [
+          "Something on the nightstand is glowing...",
+          "A phone? It isn't yours. The screen reads: IT'S DANGEROUS TO GO ALONE! TAKE THIS.",
+          "You got the PHONE OF PRIORS! It knows the past. It predicts. It does not decide.",
+          "(Press TAB to look at it.)",
+        ],
+  );
   state.hasPhone = true;
   prefetchRain();
   prefetchLeo();
+  void sealGuesses(["umbrella", "sick_kid"]).then((msg) => msg && ui.toast.show(msg));
 }
 
 export async function lookOutOfWindow(ui: UIScene): Promise<void> {

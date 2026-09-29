@@ -2,6 +2,11 @@ import * as Phaser from "phaser";
 import { Dialogue } from "../ui/Dialogue";
 import { Phone } from "../ui/Phone";
 import { CardView } from "../ui/Card";
+import { Terminal } from "../ui/Terminal";
+import { ReportView } from "../ui/Report";
+import { Toast } from "../ui/Toast";
+import { hooks } from "../state";
+import { revealGuess } from "../predict/player";
 import { COLORS, textStyle } from "../theme";
 
 /** Runs on top of every world scene and owns the dialogue box, the phone and the clock. */
@@ -9,6 +14,9 @@ export class UIScene extends Phaser.Scene {
   dialogue!: Dialogue;
   phone!: Phone;
   card!: CardView;
+  terminal!: Terminal;
+  report!: ReportView;
+  toast!: Toast;
   private clock!: Phaser.GameObjects.Text;
 
   constructor() {
@@ -20,6 +28,13 @@ export class UIScene extends Phaser.Scene {
     this.dialogue = new Dialogue(this);
     this.phone = new Phone(this);
     this.card = new CardView(this);
+    this.terminal = new Terminal(this);
+    this.report = new ReportView(this);
+    this.toast = new Toast(this);
+    hooks.onJudgment = (j) => {
+      const line = revealGuess(j);
+      if (line) this.toast.show(line, 4500);
+    };
     this.clock = this.add.text(12, 10, "", textStyle(8, COLORS.paper)).setDepth(80);
   }
 

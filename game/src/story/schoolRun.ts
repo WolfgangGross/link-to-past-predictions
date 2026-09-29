@@ -3,6 +3,7 @@
 import { predictQuantiles, type NoSignal, type QuantilePrediction } from "../predict/api";
 import { logJudgment, state, type JudgmentCard } from "../state";
 import { willItRain } from "./umbrella";
+import { sampleFromQuantiles } from "../predict/sample";
 import type { UIScene } from "../scenes/UIScene";
 
 export const ROUTES = [
@@ -43,19 +44,6 @@ export async function prefetchTraffic(): Promise<QuantilePrediction | NoSignal> 
 }
 
 const rowIndex = (depart: number, route: Route) => DEPARTURES.indexOf(depart) * ROUTES.length + ROUTES.indexOf(route);
-
-/** Draws a travel time from the predicted quantiles (piecewise-linear inverse CDF, stretched tails). */
-function sampleMinutes(q: Record<number, number>): number {
-  const levels = Object.keys(q).map(Number).sort((a, b) => a - b);
-  const u = Math.random();
-  if (u <= levels[0]) return q[levels[0]] - (levels[0] - u) * 10;
-  for (let i = 1; i < levels.length; i++) {
-    const [a, b] = [levels[i - 1], levels[i]];
-    if (u <= b) return q[a] + ((q[b] - q[a]) * (u - a)) / (b - a);
-  }
-  const last = levels[levels.length - 1];
-  return q[last] + (u - last) * 400;
-}
 
 export async function schoolRun(ui: UIScene): Promise<void> {
   ui.setClock("07:45");
@@ -117,7 +105,7 @@ export async function schoolRun(ui: UIScene): Promise<void> {
 
 async function depart(at: number, route: Route, choice: "rule" | "prediction" | "no_signal", level?: number): Promise<void> {
   const result = await (traffic ?? Promise.resolve(undefined));
-  let travel = result?.ok ? sampleMinutes(result.rows[rowIndex(at, route)]) : 17;
+  let travel = result?.ok ? sampleFromQuantiles(result.rows[rowIndex(at, route)]) : 17;
   // The phone learned from mornings when nobody had it. Now every parent follows the same advice.
   const herd = choice === "prediction" && route.id !== "bike_path";
   if (herd) travel += HERD_MINUTES;

@@ -5,6 +5,12 @@ import { TabPFNClient, TabPFNError, type Cell, type PredictParams, type Row, typ
 import * as weather from "./datasets/weather.js";
 import * as symptoms from "./datasets/symptoms.js";
 import * as traffic from "./datasets/traffic.js";
+import * as experiments from "./datasets/experiments.js";
+import * as avocados from "./datasets/avocados.js";
+import * as reinjury from "./datasets/reinjury.js";
+import { MAX_HISTORY, PERSONA, PLAYER_CATEGORIES, PLAYER_COLUMNS, PLAYER_TARGETS } from "./player.js";
+
+const QUANTILES: PredictParams = { output_type: "quantiles", quantiles: [0.1, 0.25, 0.5, 0.75, 0.8, 0.9, 0.95, 0.98] };
 
 interface WorldDataset {
   task: Task;
@@ -43,8 +49,45 @@ const WORLD: Record<string, WorldDataset> = {
     categories: { route: traffic.routes },
     X: traffic.X,
     y: traffic.y,
-    predict: { output_type: "quantiles", quantiles: [0.1, 0.25, 0.5, 0.75, 0.8, 0.9, 0.95, 0.98] },
+    predict: QUANTILES,
     maxTestRows: 12,
+  },
+  experiments: {
+    task: "regression",
+    columns: experiments.columns,
+    textColumns: ["title"],
+    categories: { team: experiments.teams },
+    X: experiments.X,
+    y: experiments.y,
+    predict: QUANTILES,
+    maxTestRows: 8,
+  },
+  avocados: {
+    task: "regression",
+    columns: avocados.columns,
+    categories: { menu: avocados.menus },
+    X: avocados.X,
+    y: avocados.y,
+    predict: QUANTILES,
+    maxTestRows: 5,
+  },
+  reinjury: {
+    task: "classification",
+    columns: reinjury.columns,
+    X: reinjury.X,
+    y: reinjury.y,
+    predict: { output_type: "probas" },
+    maxTestRows: 4,
+  },
+  // Training rows = persona prior + the request's `history`; see predict().
+  player: {
+    task: "classification",
+    columns: PLAYER_COLUMNS,
+    categories: PLAYER_CATEGORIES,
+    X: PERSONA.map((p) => PLAYER_COLUMNS.map((c) => p.row[c])),
+    y: PERSONA.map((p) => p.choice),
+    predict: { output_type: "probas" },
+    maxTestRows: 4,
   },
 };
 
@@ -53,6 +96,8 @@ const MAX_TEXT = 200;
 export interface PredictRequest {
   dataset: string;
   rows: Row[];
+  /** Player model only: the player's past judgments, each with its `choice`. */
+  history?: { row: Row; choice: string }[];
 }
 
 export interface PredictResponse {
@@ -86,24 +131,37 @@ export function parseRequest(body: unknown): PredictRequest {
   if (!Array.isArray(rows) || rows.length === 0 || rows.length > ds.maxTestRows) {
     throw new RequestError(`rows must be an array of 1–${ds.maxTestRows} rows`);
   }
-  const clean = rows.map((row, i) => {
-    if (typeof row !== "object" || row === null) throw new RequestError(`Row ${i} must be an object`);
-    const out: Row = {};
-    for (const col of ds.columns) {
-      const v = (row as Record<string, unknown>)[col];
-      const allowed = ds.categories?.[col];
-      if (allowed) {
-        if (typeof v !== "string" || !allowed.includes(v)) throw new RequestError(`Row ${i}: ${col} must be one of ${allowed.join(", ")}`);
-      } else if (ds.textColumns?.includes(col)) {
-        if (typeof v !== "string" || v.length > MAX_TEXT) throw new RequestError(`Row ${i}: ${col} must be text up to ${MAX_TEXT} chars`);
-      } else if (typeof v !== "number" || !Number.isFinite(v)) {
-        throw new RequestError(`Row ${i}: ${col} must be a finite number`);
-      }
-      out[col] = v;
+  const clean = rows.map((row, i) => cleanRow(ds, row, i));
+  if (dataset !== "player") return { dataset, rows: clean };
+  const history = (body as Record<string, unknown>).history;
+  if (!Array.isArray(history) || history.length > MAX_HISTORY) throw new RequestError(`history must be an array of up to ${MAX_HISTORY} items`);
+  return {
+    dataset,
+    rows: clean,
+    history: history.map((h, i) => {
+      const { row, choice } = (h ?? {}) as Record<string, unknown>;
+      if (!PLAYER_TARGETS.includes(choice as (typeof PLAYER_TARGETS)[number])) throw new RequestError(`history ${i}: bad choice`);
+      return { row: cleanRow(ds, row, i), choice: choice as string };
+    }),
+  };
+}
+
+function cleanRow(ds: WorldDataset, row: unknown, i: number): Row {
+  if (typeof row !== "object" || row === null) throw new RequestError(`Row ${i} must be an object`);
+  const out: Row = {};
+  for (const col of ds.columns) {
+    const v = (row as Record<string, unknown>)[col];
+    const allowed = ds.categories?.[col];
+    if (allowed) {
+      if (typeof v !== "string" || !allowed.includes(v)) throw new RequestError(`Row ${i}: ${col} must be one of ${allowed.join(", ")}`);
+    } else if (ds.textColumns?.includes(col)) {
+      if (typeof v !== "string" || v.length > MAX_TEXT) throw new RequestError(`Row ${i}: ${col} must be text up to ${MAX_TEXT} chars`);
+    } else if (typeof v !== "number" || !Number.isFinite(v)) {
+      throw new RequestError(`Row ${i}: ${col} must be a finite number`);
     }
-    return out;
-  });
-  return { dataset, rows: clean };
+    out[col] = v;
+  }
+  return out;
 }
 
 // Per-instance caches. Fits are free but slow; identical world requests reuse the real response (no tokens).
@@ -136,6 +194,7 @@ export async function predict(req: PredictRequest): Promise<PredictResponse> {
 
   const ds = WORLD[req.dataset];
   const start = performance.now();
+  if (req.history) return predictPlayer(req, ds, key, start);
   let fitId = await fitDataset(req.dataset);
   let result;
   try {
@@ -153,6 +212,26 @@ export async function predict(req: PredictRequest): Promise<PredictResponse> {
     classes: ds.task === "classification" ? [...new Set(ds.y.map(String))].sort() : undefined,
     quantiles: ds.predict.output_type === "quantiles" ? ds.predict.quantiles : undefined,
     trainRows: ds.X.length,
+    cached: false,
+    ms: Math.round(performance.now() - start),
+  };
+  if (responses.size >= MAX_CACHED_RESPONSES) responses.delete(responses.keys().next().value!);
+  responses.set(key, response);
+  return response;
+}
+
+/** The player model re-fits on every call: the context is the player's own (changing) history. */
+async function predictPlayer(req: PredictRequest, ds: WorldDataset, key: string, start: number): Promise<PredictResponse> {
+  const history = req.history ?? [];
+  const X = [...PERSONA.map((p) => p.row), ...history.map((h) => h.row)];
+  const y = [...PERSONA.map((p) => p.choice), ...history.map((h) => h.choice)];
+  const fitId = await getClient().fit(X, y, ds.task);
+  const result = await getClient().predict(fitId, req.rows, ds.task, ds.predict);
+  const response: PredictResponse = {
+    dataset: req.dataset,
+    prediction: result.prediction,
+    classes: [...PLAYER_TARGETS].sort(),
+    trainRows: X.length,
     cached: false,
     ms: Math.round(performance.now() - start),
   };

@@ -10,6 +10,8 @@ export interface Prop {
   /** Solid props block movement. Wall props (windows, pictures) are drawn over the wall layer. */
   solid?: boolean;
   wall?: boolean;
+  /** Drawn above furniture (a monitor on a desk). Implies nothing about collision. */
+  top?: boolean;
 }
 
 /** An area the player can interact with (facing it + confirm) or trigger by walking in. */
@@ -26,6 +28,8 @@ export interface NpcDef {
   at: Cell;
   facing: Facing;
   scale?: number;
+  /** Multiplies the sprite colours; the urban pack has only six people. */
+  tint?: number;
 }
 
 export interface MapDef {
@@ -38,4 +42,6 @@ export interface MapDef {
   spots: Spot[];
   npcs: NpcDef[];
   spawn: { at: Cell; facing: Facing };
+  /** White pitch markings in tile units: lines [x1, y1, x2, y2], circles [x, y, r], rects [x, y, w, h]. */
+  markings?: { lines?: number[][]; circles?: number[][]; rects?: number[][] };
 }

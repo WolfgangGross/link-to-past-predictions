@@ -92,3 +92,19 @@ export const home: MapDef = {
   ],
   spawn: { at: [3, 5], facing: "down" },
 };
+
+// The same flat in the evening: dinner, the day's results, and bed.
+export const evening: MapDef = {
+  ...home,
+  key: "evening",
+  spots: [
+    ...home.spots.filter((s) => s.id !== "door" && s.id !== "nightstand"),
+    { id: "bed", at: [1, 3], size: [2, 2] },
+  ],
+  npcs: [
+    { id: "sam", who: "sam", at: [3.5, 11.4], facing: "right" },
+    { id: "mia", who: "mia", at: [18, 12.4], facing: "down", scale: 0.85 },
+    { id: "leo", who: "leo", at: [19.5, 12.4], facing: "down", scale: 0.75 },
+  ],
+  spawn: { at: [11.5, 12.5], facing: "up" },
+};

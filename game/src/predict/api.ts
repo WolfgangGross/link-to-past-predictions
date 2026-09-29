@@ -21,12 +21,13 @@ export async function predictClasses(
   dataset: string,
   rows: Row[],
   timeoutMs = 25_000,
+  extra: Record<string, unknown> = {},
 ): Promise<ClassPrediction | NoSignal> {
   try {
     const res = await fetch("/api/predict", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dataset, rows }),
+      body: JSON.stringify({ dataset, rows, ...extra }),
       signal: AbortSignal.timeout(timeoutMs),
     });
     const body = await res.json();

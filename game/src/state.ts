@@ -36,20 +36,34 @@ export const state = {
   leoHome: undefined as boolean | undefined,
   leoContagious: undefined as boolean | undefined,
   schoolRun: undefined as { depart: number; route: string; arrive: number; late: boolean; herd: boolean } | undefined,
+  bootDone: false,
+  gpu: undefined as
+    | { funded: string[]; gains: Record<string, number>; expectedFunded?: number; expectedRule?: number }
+    | undefined,
+  avocados: undefined as { orders: number[] } | undefined,
+  final: undefined as { minutes: number; risk?: number; reinjured: boolean; whose: string } | undefined,
   judgments: [] as Judgment[],
   cards: [] as JudgmentCard[],
   messages: [] as Message[],
   /** One line per prediction, shown on the phone's PREDICT page. */
   phoneNotes: [] as string[],
+  /** Today's answers to menus and dials, saved at night for tomorrow's autopilot. */
+  choiceLog: {} as Record<string, number>,
+  dialLog: {} as Record<string, number>,
+  autopilot: false,
 };
 
 export function today(): DayScenario {
   return DAYS[state.day % DAYS.length];
 }
 
+/** Set by the UI: reveals the phone's sealed guess for this decision. */
+export const hooks = { onJudgment: (_j: Judgment) => {} };
+
 export function logJudgment(j: Judgment, card: JudgmentCard): void {
   state.judgments.push(j);
   state.cards.push(card);
+  hooks.onJudgment(j);
 }
 
 export const pct = (p: number) => `${Math.round(p * 100)}%`;

@@ -9,7 +9,10 @@
     "spike": "tsx --env-file=.env scripts/spike-tabpfn.ts",
     "data:weather": "uv run --no-project data/build_weather.py",
     "data:symptoms": "uv run --no-project data/build_symptoms.py",
-    "data:traffic": "uv run --no-project data/build_traffic.py"
+    "data:traffic": "uv run --no-project data/build_traffic.py",
+    "data:experiments": "uv run --no-project data/build_experiments.py",
+    "data:avocados": "uv run --no-project data/build_avocados.py",
+    "data:reinjury": "uv run --no-project data/build_reinjury.py"
   },
   "dependencies": {
     "phaser": "^4.2.1"

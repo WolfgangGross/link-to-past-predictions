@@ -58,13 +58,9 @@ export const streetStory: Story = {
       ]);
     },
     gate: ({ ui }) => ui.dialogue.say("The school gate. Mia's class is lining up."),
-    async tram({ ui }) {
-      await ui.dialogue.say([
-        "The tram to the office. Time to spin up the experiments.",
-        "To be continued: the office, the GPU budget, the avocados, and Mia's big final.",
-        "Thanks for playing this early build!",
-      ]);
-      window.location.reload();
+    async tram({ ui, world }) {
+      await ui.dialogue.say("The tram to the office. Time to spin up the experiments.");
+      world.goto("office");
     },
   },
 };
