@@ -71,7 +71,7 @@ export const officeStory: Story = {
       await ui.dialogue.say(
         left
           ? 'Tomas: "No node for efficiency. Fine. I\'ll make everyone else\'s runs 30% faster. For free, apparently."'
-          : 'Tomas: "Distillation is boring. Boring is how models ship."',
+          : 'Tomas: "Distillation isn\'t exciting. But a small model that runs everywhere beats a huge one that never leaves the lab."',
       );
     },
     jonas: ({ ui }) => ui.dialogue.say('Jonas: "Chunked attention gets us to a million rows. I can feel it. The prior can too."'),
