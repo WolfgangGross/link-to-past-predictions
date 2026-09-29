@@ -18,20 +18,20 @@ SEED = 23
 TEAMS = ["scaling", "multimodal", "efficiency", "forecasting"]
 # (title template, team, mean effect, extra spread)
 IDEAS = [
-    ("Chunked row attention for {n} rows", "scaling", 0.9, 0.4),
-    ("Longer context via memory tokens", "scaling", 0.5, 0.6),
-    ("Ablation: remove {part}", "scaling", -0.3, 0.2),
+    ("Chunked row attention for {n} rows", "scaling", 0.5, 0.4),
+    ("Longer context via memory tokens", "scaling", 0.3, 0.6),
+    ("Ablation: remove {part}", "scaling", -0.1, 0.2),
     ("Bigger model, same data", "scaling", 0.1, 0.3),
-    ("Joint text encoder for free-text columns", "multimodal", 0.8, 1.0),
-    ("Bigger tokenizer vocabulary", "multimodal", 0.0, 0.3),
-    ("Image patches as extra columns", "multimodal", 0.3, 1.2),
-    ("Ablation: freeze the text tower", "multimodal", -0.4, 0.2),
-    ("Distill into a fast student", "efficiency", 0.4, 0.2),
-    ("Quantize attention to int8", "efficiency", 0.2, 0.15),
-    ("Prune half the heads", "efficiency", -0.1, 0.3),
-    ("Calendar and lag features", "forecasting", 0.5, 0.2),
-    ("Cross-series attention for related tables", "forecasting", 0.7, 0.9),
-    ("Ablation: drop the date encoder", "forecasting", -0.3, 0.2),
+    ("Joint text encoder for free-text columns", "multimodal", 0.45, 1.0),
+    ("Bigger tokenizer vocabulary", "multimodal", 0.05, 0.3),
+    ("Image patches as extra columns", "multimodal", 0.2, 1.2),
+    ("Ablation: freeze the text tower", "multimodal", -0.15, 0.2),
+    ("Distill into a fast student", "efficiency", 0.3, 0.2),
+    ("Quantize attention to int8", "efficiency", 0.15, 0.15),
+    ("Prune half the heads", "efficiency", 0.0, 0.3),
+    ("Calendar and lag features", "forecasting", 0.3, 0.2),
+    ("Cross-series attention for related tables", "forecasting", 0.4, 0.9),
+    ("Ablation: drop the date encoder", "forecasting", -0.1, 0.2),
 ]
 PARTS = ["feature positional encodings", "the second attention block", "label smoothing", "the prior mixture"]
 
@@ -49,9 +49,9 @@ def main() -> None:
         mean = (
             effect
             + (0.8 if team == "scaling" else 0.2) * (log10_rows - 4.0) * (1 if effect > 0 else 0.2)
-            + 0.35 * math.log(gpu_days)
-            + 0.15 * (novelty - 3)
-            - 0.6
+            + 0.45 * math.log(gpu_days)
+            + 0.25 * (novelty - 3)
+            - 0.9
         )
         sd = 0.35 + spread + 0.15 * novelty
         X.append([title, team, log10_rows, gpu_days, novelty])

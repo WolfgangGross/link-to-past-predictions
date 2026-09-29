@@ -104,6 +104,8 @@ export const rolls = {
   /** School-run weekday, 0 = Monday. */
   weekday: int(0, 4),
   bullwhipSeed: int(1, 2 ** 31 - 2),
-  /** Proposal numbers are nudged by these, in order. */
-  gpu: Array.from({ length: 8 }, () => ({ rows: uniform(-0.4, 0.4), days: uniform(0.7, 1.3, 2), novelty: pick([-1, 0, 0, 1]) })),
+  /** Proposal numbers are nudged by these, one per pool entry. */
+  gpu: Array.from({ length: 14 }, () => ({ rows: uniform(-0.7, 0.7), days: uniform(0.5, 1.6, 2), novelty: pick([-2, -1, -1, 0, 0, 1, 1, 2]) })),
+  /** Which two proposals each team brings today: a shuffle key per pool entry. */
+  gpuDraw: Array.from({ length: 14 }, () => rand()),
 };

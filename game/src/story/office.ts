@@ -2,7 +2,7 @@
 
 import type { Story } from "../world/WorldScene";
 import { state } from "../state";
-import { allocateGpus, prefetchRanking } from "./gpu";
+import { allocateGpus, prefetchRanking, PROPOSALS } from "./gpu";
 import { avocados, prefetchForecast } from "./avocado";
 import { sealGuesses } from "../predict/player";
 
@@ -67,7 +67,7 @@ export const officeStory: Story = {
       await allocateGpus(ui);
     },
     async tomas({ ui }) {
-      const left = state.gpu && !state.gpu.funded.some((id) => id === "distill" || id === "prune");
+      const left = state.gpu && !state.gpu.funded.some((id) => PROPOSALS.find((p) => p.id === id)?.team === "efficiency");
       await ui.dialogue.say(
         left
           ? 'Tomas: "No node for efficiency. Fine. I\'ll make everyone else\'s runs 30% faster. For free, apparently."'
