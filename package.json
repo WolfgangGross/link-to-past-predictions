@@ -1,0 +1,8 @@
+{
+  "name": "link-to-past-predictions",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "spike": "node --env-file=.env scripts/spike-tabpfn.ts"
+  }
+}
