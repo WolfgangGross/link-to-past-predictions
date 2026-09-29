@@ -59,7 +59,7 @@ export const streetStory: Story = {
     },
     gate: ({ ui }) => ui.dialogue.say("The school gate. Mia's class is lining up."),
     async tram({ ui, world }) {
-      await ui.dialogue.say("The tram to the office. Time to spin up the experiments.");
+      await ui.dialogue.say("Your bike, for the ride to the office. Time to spin up the experiments.");
       world.goto("office");
     },
   },

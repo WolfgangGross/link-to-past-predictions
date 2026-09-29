@@ -28,7 +28,7 @@ export const officeStory: Story = {
     prefetchForecast();
     void sealGuesses(["gpu", "avocados"]).then((msg) => msg && ui.toast.show(msg));
     await ui.dialogue.say([
-      "Posterior Labs, Freiburg. Your desk is the one by the window.",
+      "Posterior Labs, Freiburg. Your desk is the one in the corner.",
       state.messages.length ? "Your phone buzzes. (TAB to read messages.)" : "Quiet phone. So far.",
     ]);
   },
