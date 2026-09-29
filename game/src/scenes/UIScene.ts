@@ -1,12 +1,14 @@
 import * as Phaser from "phaser";
 import { Dialogue } from "../ui/Dialogue";
 import { Phone } from "../ui/Phone";
+import { CardView } from "../ui/Card";
 import { COLORS, textStyle } from "../theme";
 
 /** Runs on top of every world scene and owns the dialogue box, the phone and the clock. */
 export class UIScene extends Phaser.Scene {
   dialogue!: Dialogue;
   phone!: Phone;
+  card!: CardView;
   private clock!: Phaser.GameObjects.Text;
 
   constructor() {
@@ -17,6 +19,7 @@ export class UIScene extends Phaser.Scene {
     this.input.keyboard!.addCapture("TAB,SPACE,UP,DOWN,LEFT,RIGHT");
     this.dialogue = new Dialogue(this);
     this.phone = new Phone(this);
+    this.card = new CardView(this);
     this.clock = this.add.text(12, 10, "", textStyle(8, COLORS.paper)).setDepth(80);
   }
 

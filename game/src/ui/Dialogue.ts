@@ -23,6 +23,9 @@ export class Dialogue {
     this.box = scene.add.container(BOX.x, BOX.y, [bg, this.text, this.more]).setDepth(100).setVisible(false);
   }
 
+  /** For the playtest script: what the box is waiting for. */
+  mode: "closed" | "typing" | "line" | "choice" = "closed";
+
   get isOpen(): boolean {
     return this.box.visible;
   }
@@ -32,9 +35,11 @@ export class Dialogue {
     for (const line of Array.isArray(lines) ? lines : [lines]) {
       await this.type(line);
       this.more.setVisible(true);
+      this.mode = "line";
       await nextKey(this.scene, CONFIRM);
     }
     this.box.setVisible(false);
+    this.mode = "closed";
   }
 
   async choose(prompt: string, options: string[]): Promise<number> {
@@ -47,6 +52,7 @@ export class Dialogue {
         [prompt, "", ...options.map((o, i) => `${i === selected ? ">" : " "} ${o}`)].join("\n"),
       );
     render();
+    this.mode = "choice";
     for (;;) {
       const key = await nextKey(this.scene, [...CONFIRM, ...UP, ...DOWN]);
       if (CONFIRM.includes(key)) break;
@@ -54,11 +60,13 @@ export class Dialogue {
       render();
     }
     this.box.setVisible(false);
+    this.mode = "closed";
     return selected;
   }
 
   /** Types a line out; a confirm press skips to the full line. */
   private type(line: string): Promise<void> {
+    this.mode = "typing";
     this.more.setVisible(false);
     this.text.setText("");
     return new Promise((resolve) => {

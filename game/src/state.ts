@@ -1,5 +1,7 @@
 // The day's state: story flags plus the log of judgments the phone will later learn from.
 
+import { DAYS, type DayScenario } from "./data/scenarios";
+
 export interface Judgment {
   scene: string;
   clock: string;
@@ -7,15 +9,46 @@ export interface Judgment {
   threshold?: number;
   predicted?: number;
   action: string;
+  /** Who bears the cost of a false negative for this decision. */
+  costOn: "family" | "others" | "self";
   outcome?: string;
 }
 
+/** The book's five questions, answered per decision. */
+export interface JudgmentCard {
+  title: string;
+  falseNegative: string;
+  falsePositive: string;
+  whoBears: string;
+  whoDecides: string;
+  oldRule: string;
+}
+
+export interface Message {
+  from: string;
+  text: string;
+}
+
 export const state = {
+  day: 0,
   hasPhone: false,
   umbrellas: undefined as boolean | undefined,
+  leoHome: undefined as boolean | undefined,
+  leoContagious: undefined as boolean | undefined,
   judgments: [] as Judgment[],
+  cards: [] as JudgmentCard[],
+  messages: [] as Message[],
+  /** One line per prediction, shown on the phone's PREDICT page. */
+  phoneNotes: [] as string[],
 };
 
-export function logJudgment(j: Judgment): void {
-  state.judgments.push(j);
+export function today(): DayScenario {
+  return DAYS[state.day % DAYS.length];
 }
+
+export function logJudgment(j: Judgment, card: JudgmentCard): void {
+  state.judgments.push(j);
+  state.cards.push(card);
+}
+
+export const pct = (p: number) => `${Math.round(p * 100)}%`;

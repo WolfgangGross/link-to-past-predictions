@@ -2,6 +2,11 @@ import * as Phaser from "phaser";
 import { COLORS, WIDTH, textStyle } from "../theme";
 import { CONFIRM, LEFT, RIGHT, nextKey } from "./keys";
 
+export interface PhonePage {
+  title: string;
+  lines: string[];
+}
+
 const W = 200;
 const H = 244;
 const OPEN_X = WIDTH - W - 16;
@@ -29,6 +34,9 @@ export class Phone {
     this.root = scene.add.container(WIDTH + 8, 12, [body, title, this.content, this.hint]).setDepth(90);
   }
 
+  /** For the playtest script: true while the threshold dial waits for input. */
+  dialing = false;
+
   get isOpen(): boolean {
     return this.opened;
   }
@@ -49,7 +57,22 @@ export class Phone {
   showLines(heading: string, lines: string[], hint = ""): void {
     this.reset(hint);
     this.add(this.scene.add.text(0, 0, heading, textStyle(8, COLORS.accent, INNER)));
-    this.add(this.scene.add.text(0, 24, lines.join("\n\n"), textStyle(8, COLORS.paper, INNER)));
+    this.add(this.scene.add.text(0, 24, lines.join("\n\n"), textStyle(8, COLORS.paper, INNER)).setLineSpacing(4));
+  }
+
+  /** TAB view: flip through pages until TAB or Escape closes the phone. */
+  async browse(pages: PhonePage[]): Promise<void> {
+    let i = 0;
+    const render = () => this.showLines(`${pages[i].title}  ${i + 1}/${pages.length}`, pages[i].lines, "<-/-> page  TAB close");
+    render();
+    await this.open();
+    for (;;) {
+      const key = await nextKey(this.scene, [...LEFT, ...RIGHT, "Tab", "Escape"]);
+      if (key === "Tab" || key === "Escape") break;
+      i = (i + (LEFT.includes(key) ? -1 : 1) + pages.length) % pages.length;
+      render();
+    }
+    await this.close();
   }
 
   thinking(heading: string): void {
@@ -83,9 +106,13 @@ export class Phone {
       this.drawBar(116, 0, value / 100);
     };
     render();
+    this.dialing = true;
     for (;;) {
       const key = await nextKey(this.scene, [...CONFIRM, ...LEFT, ...RIGHT]);
-      if (CONFIRM.includes(key)) return value / 100;
+      if (CONFIRM.includes(key)) {
+        this.dialing = false;
+        return value / 100;
+      }
       value = Phaser.Math.Clamp(value + (LEFT.includes(key) ? -step : step), 0, 100);
       render();
     }

@@ -1,23 +1,28 @@
 // Scene 1 — the umbrella: rule → prediction → threshold → action → ripple.
 
 import { predictClasses, type ClassPrediction, type NoSignal } from "../predict/api";
-import { weatherMornings } from "../data/weather-mornings";
-import { logJudgment, state } from "../state";
+import { weatherFor } from "../data/scenarios";
+import { logJudgment, pct, state, today, type JudgmentCard } from "../state";
 import type { UIScene } from "../scenes/UIScene";
-
-// Real, held-out Freiburg mornings the model has never seen, chosen for an uncertain sky (day 1, replays).
-const TODAY_DATES = ["2025-09-30", "2025-10-06", "2025-09-26"];
-const today = weatherMornings.find((m) => m.date === TODAY_DATES[0])!;
+import { prefetchLeo } from "./leo";
 
 const BASE_RATE = 0.195; // share of rainy school runs in the training data
 
+const CARD: JudgmentCard = {
+  title: "Umbrellas",
+  falseNegative: "No umbrellas and it pours: soaked kids at school.",
+  falsePositive: "Umbrellas and no rain: carried for nothing, one gets lost.",
+  whoBears: "Mostly Mia and Leo. A little bit your wallet.",
+  whoDecides: "You. The phone only did the maths.",
+  oldRule: '"Always pack umbrellas": cheap, reliable, no forecast needed.',
+};
+
 let rain: Promise<ClassPrediction | NoSignal> | undefined;
-let shown: ClassPrediction | undefined; // what the player saw on the phone
 let rainedOnSchoolRun: boolean | undefined;
 
 /** Start the TabPFN call as soon as the phone is in hand, so it is ready at the window. */
-function prefetchRain(): void {
-  rain ??= predictClasses("weather", today.features);
+export function prefetchRain(): void {
+  rain ??= predictClasses("weather", [weatherFor(today()).features]);
 }
 
 export async function pickUpPhone(ui: UIScene): Promise<void> {
@@ -29,6 +34,7 @@ export async function pickUpPhone(ui: UIScene): Promise<void> {
   ]);
   state.hasPhone = true;
   prefetchRain();
+  prefetchLeo();
 }
 
 export async function lookOutOfWindow(ui: UIScene): Promise<void> {
@@ -53,10 +59,7 @@ export async function lookOutOfWindow(ui: UIScene): Promise<void> {
   }
 
   await ui.phone.open();
-  const threshold = await ui.phone.dial(
-    "YOUR JUDGMENT",
-    "Pack umbrellas if the chance of rain is at least...",
-  );
+  const threshold = await ui.phone.dial("YOUR JUDGMENT", "Pack umbrellas if the chance of rain is at least...");
   ui.phone.thinking("RAIN ON THE SCHOOL RUN");
   prefetchRain();
   const result = await rain!;
@@ -69,9 +72,9 @@ export async function lookOutOfWindow(ui: UIScene): Promise<void> {
     return;
   }
 
-  shown = result;
-  const p = result.probs.rain;
+  const p = result.rows[0].rain;
   const take = p >= threshold;
+  state.phoneNotes.push(`Rain at 8:00: ${pct(p)}`);
   ui.phone.showProbability("RAIN ON THE SCHOOL RUN", p, threshold, [
     `Learned from ${result.trainRows.toLocaleString("en")} real Freiburg mornings.`,
     "No training. Just the past.",
@@ -82,49 +85,30 @@ export async function lookOutOfWindow(ui: UIScene): Promise<void> {
   ]);
   await ui.phone.close();
   decide(take, "prediction", threshold, p);
+  await ui.card.show(CARD);
 }
 
-export async function leaveHouse(ui: UIScene): Promise<boolean> {
-  if (state.umbrellas === undefined) {
-    await ui.dialogue.say("Wait. Umbrellas or not? Better check the sky from the window first.");
-    return false;
-  }
+/** Resolves the rain once the family is outside. Returns lines for the street scene. */
+export async function rainOutcome(): Promise<string[]> {
   // The world samples from the phone's own probability, even if you never looked: 30% comes true 3 times in 10.
   const result = rain ? await rain : undefined;
-  const chance = result?.ok ? result.probs.rain : BASE_RATE;
+  const chance = result?.ok ? result.rows[0].rain : BASE_RATE;
   rainedOnSchoolRun ??= Math.random() < chance;
-  const lines = rainedOnSchoolRun
-    ? state.umbrellas
-      ? ["It rains. Everyone stays dry.", "Leo loses his umbrella anyway. The rule has costs too."]
-      : ["It pours. Mia and Leo arrive soaked.", `Mia: "The phone said only ${pct(chance)}!"`, "Unlikely things still happen, just not often."]
-    : state.umbrellas
-      ? ["Not a drop. Three umbrellas carried for nothing.", "A false positive: cheap, but not free."]
-      : ["Dry all the way. Hands free."];
-  await ui.dialogue.say([
-    "8:00. Out the door with Mia and Leo...",
-    ...lines,
-    "A false negative soaks the kids. A false positive costs an umbrella. The phone did the maths. You chose the line.",
-  ]);
-  const last = state.judgments.at(-1);
-  if (last) last.outcome = rainedOnSchoolRun ? "rain" : "dry";
-  return true;
+  const judgment = state.judgments.find((j) => j.scene === "umbrella");
+  if (judgment) judgment.outcome = rainedOnSchoolRun ? "rain" : "dry";
+  const kids = state.leoHome ? "Mia" : "Mia and Leo";
+  if (rainedOnSchoolRun) {
+    return state.umbrellas
+      ? ["It rains. Everyone stays dry.", `${state.leoHome ? "Mia" : "Leo"} leaves an umbrella at school anyway. The rule has costs too.`]
+      : [`It pours. ${kids} ${state.leoHome ? "arrives" : "arrive"} soaked.`, `Mia: "The phone said only ${pct(chance)}!"`, "Unlikely things still happen, just not often."];
+  }
+  return state.umbrellas ? ["Not a drop. Umbrellas carried for nothing.", "A false alarm: cheap, but not free."] : ["Dry all the way. Hands free."];
 }
 
 function decide(umbrellas: boolean, choice: "rule" | "prediction" | "no_signal", threshold?: number, predicted?: number): void {
   state.umbrellas = umbrellas;
-  logJudgment({
-    scene: "umbrella",
-    clock: "06:40",
-    choice,
-    threshold,
-    predicted,
-    action: umbrellas ? "umbrellas" : "no_umbrellas",
-  });
-}
-
-const pct = (p: number) => `${Math.round(p * 100)}%`;
-
-export function phoneSummary(): string[] {
-  if (!shown) return ["No predictions yet.", "Look out of the window."];
-  return [`Rain on the school run: ${pct(shown.probs.rain)}`, `From ${shown.trainRows.toLocaleString("en")} past mornings.`];
+  logJudgment(
+    { scene: "umbrella", clock: "06:40", choice, threshold, predicted, action: umbrellas ? "umbrellas" : "no umbrellas", costOn: "family" },
+    CARD,
+  );
 }

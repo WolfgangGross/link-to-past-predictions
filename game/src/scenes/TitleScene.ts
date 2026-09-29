@@ -22,7 +22,7 @@ export class TitleScene extends Phaser.Scene {
 
     void nextKey(this, CONFIRM).then(() => {
       this.cameras.main.fadeOut(300, 14, 14, 18);
-      this.cameras.main.once("camerafadeoutcomplete", () => this.scene.start("bedroom"));
+      this.cameras.main.once("camerafadeoutcomplete", () => this.scene.start("world", { map: "home" }));
     });
   }
 }

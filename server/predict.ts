@@ -3,10 +3,13 @@
 
 import { TabPFNClient, TabPFNError, type Cell, type PredictParams, type Row, type Task } from "./tabpfn.js";
 import * as weather from "./datasets/weather.js";
+import * as symptoms from "./datasets/symptoms.js";
 
 interface WorldDataset {
   task: Task;
   columns: readonly string[];
+  /** Columns that hold free text (TabPFN-3.5 reads them directly); all others must be numbers. */
+  textColumns?: readonly string[];
   X: Cell[][];
   y: Cell[];
   predict: PredictParams;
@@ -22,7 +25,18 @@ const WORLD: Record<string, WorldDataset> = {
     predict: { output_type: "probas" },
     maxTestRows: 4,
   },
+  symptoms: {
+    task: "classification",
+    columns: symptoms.columns,
+    textColumns: ["said"],
+    X: symptoms.X,
+    y: symptoms.y,
+    predict: { output_type: "probas" },
+    maxTestRows: 4,
+  },
 };
+
+const MAX_TEXT = 200;
 
 export interface PredictRequest {
   dataset: string;
@@ -63,7 +77,11 @@ export function parseRequest(body: unknown): PredictRequest {
     const out: Row = {};
     for (const col of ds.columns) {
       const v = (row as Record<string, unknown>)[col];
-      if (typeof v !== "number" || !Number.isFinite(v)) throw new RequestError(`Row ${i}: ${col} must be a finite number`);
+      if (ds.textColumns?.includes(col)) {
+        if (typeof v !== "string" || v.length > MAX_TEXT) throw new RequestError(`Row ${i}: ${col} must be text up to ${MAX_TEXT} chars`);
+      } else if (typeof v !== "number" || !Number.isFinite(v)) {
+        throw new RequestError(`Row ${i}: ${col} must be a finite number`);
+      }
       out[col] = v;
     }
     return out;

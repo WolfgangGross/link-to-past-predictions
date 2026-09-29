@@ -1,13 +1,15 @@
-// Headless playthrough of the current build with screenshots. Uses the system Chromium.
-// Run: npx tsx scripts/playtest.ts [url] [screenshot-dir]
-// Makes at most one live prediction (cached by the server after the first run).
+// Scripted headless playthrough with screenshots, driven by the game's own UI state (window.__game).
+// Run: npx tsx scripts/playtest.ts [url] [screenshot-dir] [--rule]
+//   --rule  follow the old rules instead of asking the phone (no predictions shown)
 
 import { mkdirSync } from "node:fs";
 import path from "node:path";
-import { chromium, type Page } from "playwright-core";
+import { chromium } from "playwright-core";
 
-const url = process.argv[2] ?? "http://localhost:5173/";
-const outDir = process.argv[3] ?? "playtest-shots";
+const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+const useRules = process.argv.includes("--rule");
+const url = args[0] ?? "http://localhost:5173/";
+const outDir = args[1] ?? "playtest-shots";
 mkdirSync(outDir, { recursive: true });
 
 const browser = await chromium.launch({
@@ -19,74 +21,153 @@ const errors: string[] = [];
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
 
-let shot = 0;
-const snap = async (name: string) => {
-  const file = path.join(outDir, `${String(++shot).padStart(2, "0")}-${name}.png`);
-  await page.screenshot({ path: file });
-  console.log("shot", file);
-};
-const wait = (ms: number) => page.waitForTimeout(ms);
-const hold = async (p: Page, key: string, ms: number) => {
-  await p.keyboard.down(key);
-  await wait(ms);
-  await p.keyboard.up(key);
-  await wait(80);
-};
-const tap = async (key: string, pause = 250) => {
-  await page.keyboard.press(key);
-  await wait(pause);
-};
-/** Advance n dialogue lines, letting each finish typing first. */
-const advance = async (n: number) => {
-  for (let i = 0; i < n; i++) {
-    await wait(1600);
-    await tap("Space", 150);
+interface UiState {
+  dialog: string;
+  text: string;
+  dialing: boolean;
+  card: boolean;
+}
+
+// Runs in the page; the game is untyped from here.
+const uiState = (): Promise<UiState> =>
+  page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ui = (window as any).__game.scene.getScene("ui");
+    return { dialog: ui.dialogue.mode, text: ui.dialogue.text.text, dialing: ui.phone.dialing, card: ui.card.isOpen };
+  });
+
+async function until(pred: (s: UiState) => boolean, what: string, timeoutMs = 30_000): Promise<UiState> {
+  const end = Date.now() + timeoutMs;
+  for (;;) {
+    const s = await uiState();
+    if (pred(s)) return s;
+    if (Date.now() > end) throw new Error(`Timed out waiting for ${what}; state=${JSON.stringify(s)}`);
+    await page.waitForTimeout(100);
   }
+}
+
+let shotN = 0;
+async function shot(name: string) {
+  const file = path.join(outDir, `${String(++shotN).padStart(2, "0")}-${name}.png`);
+  await page.screenshot({ path: file });
+  console.log("  shot", file);
+}
+
+const press = async (key: string) => {
+  await page.keyboard.press(key);
+  await page.waitForTimeout(120);
 };
+
+/** Advance dialogue lines until a choice, the dial, a card, or the box closes. Logs each line. */
+async function read(): Promise<UiState> {
+  for (;;) {
+    const s = await until((s) => s.dialog === "line" || s.dialog === "choice" || s.dialing || s.card || s.dialog === "closed", "dialogue");
+    if (s.dialog !== "line") return s;
+    console.log("  >", s.text.replace(/\n/g, " "));
+    await press("Space");
+    await page.waitForTimeout(150);
+    const after = await uiState();
+    if (after.dialog === "closed" && !after.dialing && !after.card) {
+      await page.waitForTimeout(200);
+      const settled = await uiState();
+      if (settled.dialog === "closed" && !settled.dialing && !settled.card) return settled;
+    }
+  }
+}
+
+/** Interact (or start) and read until the next decision point. */
+async function talk(): Promise<UiState> {
+  await press("Space");
+  await until((s) => s.dialog === "line" || s.dialog === "choice", "dialogue to open");
+  return read();
+}
+
+async function choose(index: number) {
+  const s = await until((s) => s.dialog === "choice", "choice");
+  console.log("  ?", s.text.replace(/\n/g, " | "), "->", index);
+  for (let i = 0; i < index; i++) await press("ArrowDown");
+  await press("Space");
+}
+
+async function dial(steps: number) {
+  await until((s) => s.dialing, "dial");
+  const key = steps < 0 ? "ArrowLeft" : "ArrowRight";
+  for (let i = 0; i < Math.abs(steps); i++) await press(key);
+  await press("Space");
+}
+
+async function closeCard(name: string) {
+  await until((s) => s.card, "card");
+  await shot(name);
+  await press("Space");
+}
+
+async function teleport(col: number, row: number, facing: string) {
+  await page.evaluate(
+    ([c, r, f]) => (window as any).__game.scene.getScene("world").teleport(c, r, f), // eslint-disable-line @typescript-eslint/no-explicit-any
+    [col, row, facing] as const,
+  );
+  await page.waitForTimeout(150);
+}
+
+// ---------------------------------------------------------------------------------------------
 
 await page.goto(url);
 await page.locator("canvas").waitFor();
-await wait(1500);
-await snap("title");
+await page.waitForTimeout(1200);
+await shot("title");
 
-await tap("Space", 900);
-await wait(800);
-await snap("intro");
-await advance(2);
+console.log("intro");
+await talk();
 
-// Walk up beside the nightstand, face it, pick up the phone.
-await hold(page, "ArrowUp", 450);
-await hold(page, "ArrowLeft", 60);
-await tap("Space", 400);
-await wait(1200);
-await snap("phone-found");
-await advance(4);
+console.log("phone");
+await teleport(3, 3.5, "up");
+await talk();
 
-// Down, right past the desk, up to the window.
-await hold(page, "ArrowDown", 300);
-await hold(page, "ArrowRight", 1500);
-await hold(page, "ArrowUp", 500);
-await tap("Space", 300);
-await advance(2);
-await wait(1200);
-await snap("umbrella-choice");
-await tap("ArrowDown");
-await tap("Space", 600);
-for (let i = 0; i < 3; i++) await tap("ArrowLeft", 120);
-await snap("threshold-dial");
-await tap("Space", 300);
-await snap("phone-thinking");
-await wait(9000);
-await snap("prediction");
-await advance(2);
+console.log("umbrella");
+await teleport(4, 3, "up");
+await talk();
+await choose(useRules ? 0 : 1);
+if (!useRules) {
+  await dial(-3);
+  await until((s) => s.dialog === "line", "rain prediction");
+  await shot("rain-prediction");
+  await read();
+  await closeCard("umbrella-card");
+}
+await read();
 
-// To the door.
-await hold(page, "ArrowDown", 1300);
-await hold(page, "ArrowLeft", 650);
-await hold(page, "ArrowDown", 300);
-await tap("Space", 300);
-await wait(1500);
-await snap("outside");
+console.log("leo");
+await teleport(20.6, 3.45, "up");
+await talk();
+await choose(useRules ? 0 : 1);
+if (!useRules) {
+  await read();
+  await dial(0);
+  await until((s) => s.dialog === "line", "leo prediction");
+  await shot("leo-prediction");
+  await press("Space");
+  await page.waitForTimeout(300);
+  await until((s) => s.dialog === "line", "what moves it");
+  await shot("leo-what-moves-it");
+  const s = await read();
+  if (s.dialog === "choice") {
+    await shot("leo-whose-line");
+    await choose(0);
+    await read();
+  }
+  await closeCard("leo-card");
+}
+await read();
+
+console.log("door");
+await teleport(11.5, 13, "down");
+await page.keyboard.down("ArrowDown");
+await page.waitForTimeout(400);
+await page.keyboard.up("ArrowDown");
+await until((s) => s.dialog === "line", "door dialogue");
+await shot("outside");
+await read().catch(() => undefined); // the build ends with a page reload
 
 console.log(errors.length ? `ERRORS:\n${errors.join("\n")}` : "no page errors");
 await browser.close();
