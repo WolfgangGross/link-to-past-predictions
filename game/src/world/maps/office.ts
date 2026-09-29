@@ -35,8 +35,7 @@ export const office: MapDef = {
     `└${"─".repeat(8)} ${"─".repeat(9)}┘`,
   ],
   props: [
-    // Windows, whiteboard, pictures, and the door out.
-    ...[2, 6].map((x) => ({ sheet: "rpg" as const, at: [x, 1] as const, tiles: [[158], [215]], wall: true })),
+    // The window is drawn by WeatherWindow; whiteboard, pictures, and the door out.
     { sheet: "indoor", at: [13, 1], tiles: [[343, 344, 345]], wall: true },
     { sheet: "indoor", at: [17, 1], tiles: [[340]], wall: true },
     { sheet: "urban", at: [9, 11], tiles: [[283]], wall: true },
@@ -59,6 +58,7 @@ export const office: MapDef = {
     { sheet: "indoor", at: [18, 3], tiles: [[16]], solid: true },
     { sheet: "indoor", at: [1, 10], tiles: [[17]], solid: true },
   ],
+  windows: [{ at: [10, 1], size: [2, 2] }],
   spots: [
     { id: "adaDesk", at: [2, 3], size: [3, 1] },
     { id: "whiteboard", at: [13, 1], size: [3, 2] },
@@ -66,10 +66,10 @@ export const office: MapDef = {
     { id: "exit", at: [9, 11], trigger: "touch", exit: { label: "PITCH", arrow: "down" } },
   ],
   npcs: [
-    { id: "petra", name: "Petra", who: "ada", at: [17, 4], facing: "left", tint: 0xd8c8ff },
+    { id: "petra", name: "Petra", who: "ada", at: [17, 4], facing: "left", tint: 0x9fb8ff },
     { id: "tomas", name: "Tomas", who: "sam", at: [7, 8.4], facing: "up", tint: 0xc8f0d0 },
     { id: "jonas", name: "Jonas", who: "leo", at: [7, 4.4], facing: "up", tint: 0xd0e0ff },
-    { id: "rosa", name: "Rosa", who: "ada", at: [14, 7.2], facing: "down", tint: 0xffe0d0 },
+    { id: "rosa", name: "Rosa", who: "mia", at: [14, 7.2], facing: "down" },
   ],
   spawn: { at: [10.5, 9], facing: "up" },
 };

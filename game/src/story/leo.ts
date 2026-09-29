@@ -4,7 +4,6 @@ import { predictClasses, type ClassPrediction, type NoSignal, type Row } from ".
 import { rolls } from "../data/rolls";
 import { logJudgment, pct, state, type JudgmentCard } from "../state";
 import type { UIScene } from "../scenes/UIScene";
-import { sealGuesses } from "../predict/player";
 
 const BASE_RATE = 0.41; // share of contagious mornings in the training data
 const CHARLES_LINE = 0.1; // Charles keeps Leo home at anything above this
@@ -50,7 +49,6 @@ export async function talkToLeo(ui: UIScene): Promise<void> {
   const pick = await ui.dialogue.choose("Leo?", ["Follow the rule: Leo stays home", "Check his temperature, ask the phone"], 1);
   if (pick === 0) {
     decide(true, "rule");
-    void sealGuesses(["school_run"]).then((msg) => msg && ui.toast.show(msg));
     await ui.dialogue.say("Leo stays home. Charles cancels his big meeting and sets up on the sofa.");
     return;
   }
@@ -102,7 +100,6 @@ export async function talkToLeo(ui: UIScene): Promise<void> {
   }
   await ui.phone.close();
   decide(home, "prediction", threshold, actual);
-  void sealGuesses(["school_run"]).then((msg) => msg && ui.toast.show(msg));
   await ui.dialogue.say(home ? "Leo stays home. Charles cancels his big meeting." : "Leo gets dressed. Spelling test it is.");
   await ui.card.show(CARD);
 }

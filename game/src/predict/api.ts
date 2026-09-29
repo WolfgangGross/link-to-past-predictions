@@ -24,7 +24,7 @@ export interface ApiCall {
   ms?: number;
 }
 
-/** The phone shows the latest call for the world models. The player model (your sealed guesses) is not the phone's. */
+/** The phone shows the latest call for the world models. */
 export const apiLog: { inflight: Record<string, ApiCall | undefined>; last: Record<string, ApiCall | undefined> } = { inflight: {}, last: {} };
 
 let callCount = 0;

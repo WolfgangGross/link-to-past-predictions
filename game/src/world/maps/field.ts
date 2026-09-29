@@ -15,15 +15,13 @@ export const field: MapDef = {
   ],
   walls: Array.from({ length: 10 }, () => " ".repeat(16)),
   props: [
-    // Goals (rope barriers) and benches, trees around the pitch.
-    { sheet: "urban", at: [0, 3], tiles: [[217], [217], [217]], solid: true },
-    { sheet: "urban", at: [15, 3], tiles: [[217], [217], [217]], solid: true },
+    // Benches and green trees around the pitch (goals are drawn as markings).
     { sheet: "urban", at: [4, 7], tiles: [[270, 271]], solid: true },
     { sheet: "urban", at: [10, 7], tiles: [[270, 271]], solid: true },
-    ...[3, 12].map((x) => ({ sheet: "urban" as const, at: [x, 0] as const, tiles: [[313], [340]], solid: true })),
+    ...[1, 4, 7, 10, 13].map((x) => ({ sheet: "urban" as const, at: [x, 0] as const, tiles: [[232], [259]], solid: true })),
   ],
   markings: {
-    rects: [[1, 2, 14, 5], [1, 3.2, 2, 2.6], [13, 3.2, 2, 2.6]],
+    rects: [[1, 2, 14, 5], [1, 3.2, 2, 2.6], [13, 3.2, 2, 2.6], [0.3, 3.4, 0.7, 2.2], [15, 3.4, 0.7, 2.2]],
     lines: [[8, 2, 8, 7]],
     circles: [[8, 4.5, 1.3]],
   },

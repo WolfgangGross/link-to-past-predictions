@@ -51,13 +51,9 @@ export const state = {
   autopilot: false,
 };
 
-/** Set by the UI: reveals the phone's sealed guess for this decision. */
-export const hooks = { onJudgment: (_j: Judgment) => {} };
-
 export function logJudgment(j: Judgment, card: JudgmentCard): void {
   state.judgments.push(j);
   state.cards.push(card);
-  hooks.onJudgment(j);
 }
 
 export const pct = (p: number) => `${Math.round(p * 100)}%`;

@@ -2,7 +2,7 @@ import * as Phaser from "phaser";
 import { COLORS, WIDTH, textStyle } from "../theme";
 import { sfx } from "../audio";
 
-/** A small, non-blocking notice at the top of the screen (the phone's sealed guesses). */
+/** A small, non-blocking notice at the top of the screen. */
 export class Toast {
   private readonly scene: Phaser.Scene;
   private readonly root: Phaser.GameObjects.Container;

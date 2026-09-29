@@ -2,13 +2,14 @@
 
 import type { Story } from "../world/WorldScene";
 import { state } from "../state";
-import { rainOutcome } from "./umbrella";
+import { rainOutcome, willItRain } from "./umbrella";
 import { CARD as SCHOOL_RUN_CARD, SCHOOL_STARTS, clock } from "./schoolRun";
 
 export const streetStory: Story = {
-  async onEnter({ ui }) {
+  async onEnter({ ui, world }) {
     const run = state.schoolRun!;
     ui.setClock(clock(run.arrive));
+    world.setWeather(await willItRain(), state.umbrellas ?? true);
     const lines = [...(await rainOutcome())];
     if (run.herd) {
       lines.push(

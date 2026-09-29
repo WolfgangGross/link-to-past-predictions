@@ -4,7 +4,7 @@ import type { Story } from "../world/WorldScene";
 import { state } from "../state";
 import { allocateGpus, prefetchRanking, PROPOSALS } from "./gpu";
 import { avocados, prefetchForecast } from "./avocado";
-import { sealGuesses } from "../predict/player";
+import { currentSky } from "./umbrella";
 
 /** Morning ripples that arrive as messages once you're at work. */
 function morningMessages(): void {
@@ -20,13 +20,13 @@ function morningMessages(): void {
 }
 
 export const officeStory: Story = {
+  sky: currentSky,
   async onEnter({ ui }) {
     ui.setClock("08:55");
     morningMessages();
     // Both live predictions start now; the player will reach them a minute or two later.
     prefetchRanking();
     prefetchForecast();
-    void sealGuesses(["gpu", "avocados"]).then((msg) => msg && ui.toast.show(msg));
     await ui.dialogue.say([
       "Posterior Labs, Freiburg. Your desk is the one in the corner.",
       state.messages.length ? "Your phone buzzes. (TAB to read messages.)" : "Quiet phone. So far.",

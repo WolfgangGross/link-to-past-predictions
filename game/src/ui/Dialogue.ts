@@ -49,12 +49,12 @@ export class Dialogue {
     this.mode = "closed";
   }
 
-  /** `initial` is the option the cursor starts on. */
-  async choose(prompt: string, options: string[], initial = 0): Promise<number> {
+  /** `initial` is the option the cursor starts on. `autoOverride` replaces yesterday's remembered pick when the autopilot is on. */
+  async choose(prompt: string, options: string[], initial = 0, autoOverride?: number): Promise<number> {
     this.box.setVisible(true);
     this.more.setVisible(false);
     await this.type(prompt);
-    const auto = this.autopick?.(prompt, options);
+    const auto = this.autopick ? (autoOverride ?? this.autopick(prompt, options)) : undefined;
     if (auto !== undefined && auto < options.length) {
       this.text.setText([prompt, "", `> ${options[auto]}`, "", "(The phone chose for you, with your lines from yesterday.)"].join("\n"));
       this.mode = "line";

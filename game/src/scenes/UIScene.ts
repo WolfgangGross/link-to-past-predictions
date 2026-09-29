@@ -5,9 +5,7 @@ import { CardView } from "../ui/Card";
 import { Terminal } from "../ui/Terminal";
 import { ReportView } from "../ui/Report";
 import { Toast } from "../ui/Toast";
-import { hooks } from "../state";
 import { audioHooks } from "../audio";
-import { revealGuess } from "../predict/player";
 import { COLORS, textStyle } from "../theme";
 
 /** Runs on top of every world scene and owns the dialogue box, the phone and the clock. */
@@ -33,10 +31,6 @@ export class UIScene extends Phaser.Scene {
     this.terminal = new Terminal(this);
     this.report = new ReportView(this);
     this.toast = new Toast(this);
-    hooks.onJudgment = (j) => {
-      const line = revealGuess(j);
-      if (line) this.toast.show(line, 4500);
-    };
     audioHooks.onMute = (muted) => this.toast.show(muted ? "Sound off  (M)" : "Sound on  (M)", 1500);
     this.clockBox = this.add.graphics().setDepth(79);
     this.clock = this.add.text(16, 13, "", textStyle(10, COLORS.accent)).setDepth(80);

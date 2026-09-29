@@ -50,6 +50,8 @@ export class WorldScene extends Phaser.Scene {
   private windows: WeatherWindow[] = [];
   private phone?: Phaser.GameObjects.Image;
   private stepClock = 0;
+  /** Weather on an outdoor map: falling rain and the umbrellas people carry through it. */
+  private outdoors?: { rain: boolean; umbrellas: boolean; g: Phaser.GameObjects.Graphics };
 
   constructor() {
     super("world");
@@ -62,6 +64,7 @@ export class WorldScene extends Phaser.Scene {
     this.tags.length = 0;
     this.windows = [];
     this.phone = undefined;
+    this.outdoors = undefined;
     this.lastTouched = undefined;
     this.leaving = false;
   }
@@ -159,6 +162,7 @@ export class WorldScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     for (const s of [this.player, ...[...this.npcs.values()].map((n) => n.sprite)]) s.setDepth(s.y);
     for (const { text, sprite } of this.tags) text.setPosition(Math.round(sprite.x), Math.round(sprite.y - sprite.displayHeight / 2 - 1));
+    if (this.outdoors) this.drawOutdoors();
     const k = this.keys;
     const x = (k.right.isDown || k.d.isDown ? 1 : 0) - (k.left.isDown || k.a.isDown ? 1 : 0);
     const y = (k.down.isDown || k.s.isDown ? 1 : 0) - (k.up.isDown || k.w.isDown ? 1 : 0);
@@ -199,6 +203,14 @@ export class WorldScene extends Phaser.Scene {
     this.player.setPosition((col + 0.5) * TILE, (row + 0.5) * TILE);
     this.facing = facing;
     this.player.setFrame(charFrame("ada", facing));
+  }
+
+  /** Rain over an outdoor map. Whoever has an umbrella carries it (open in the rain); whoever hasn't gets soaked. */
+  setWeather(rain: boolean, umbrellas: boolean): void {
+    this.outdoors?.g.destroy();
+    this.outdoors = { rain, umbrellas, g: this.add.graphics().setDepth(99_990) };
+    if (rain && !umbrellas) for (const s of [this.player, this.npcs.get("mia")?.sprite]) s?.setTint(0x9db4cc);
+    this.refreshSky();
   }
 
   /** Turns an NPC to face the player. */
@@ -251,7 +263,38 @@ export class WorldScene extends Phaser.Scene {
     }
     const sky = this.story.sky?.();
     if (sky) for (const w of this.windows) w.set(sky);
-    ambience.set(this.windows.length ? sky : undefined);
+    ambience.set(this.windows.length ? sky : this.outdoors?.rain ? "rain" : undefined);
+  }
+
+  private drawOutdoors(): void {
+    const { rain, umbrellas, g } = this.outdoors!;
+    g.clear();
+    if (rain) {
+      const w = this.def.walls[0].length * TILE;
+      const h = this.def.walls.length * TILE;
+      const t = this.time.now;
+      g.fillStyle(0x1c2a44, 0.14).fillRect(0, 0, w, h);
+      g.lineStyle(1, 0xb8d8f2, 0.75);
+      for (let i = 0; i < (w * h) / 1400; i++) {
+        const x = (i * 47) % w;
+        const y = (i * 29 + t * 0.28 + ((i * 13) % 40)) % h;
+        g.lineBetween(x, y, x - 1, y + 4);
+      }
+    }
+    if (!umbrellas) return;
+    for (const [sprite, color] of [[this.player, 0xd94f4f], [this.npcs.get("mia")?.sprite, 0xf2c94c]] as const) {
+      if (!sprite) continue;
+      const x = Math.round(sprite.x);
+      const top = Math.round(sprite.y - sprite.displayHeight / 2);
+      if (rain) {
+        // Held out at the side: canopy centred on the handle, handle ending in the hand.
+        const hx = x + 9;
+        g.fillStyle(color).fillRect(hx - 7, top + 3, 14, 2).fillRect(hx - 5, top + 1, 10, 2).fillRect(hx - 3, top, 6, 1);
+        g.fillStyle(0x4a3a2a).fillRect(hx, top + 5, 1, Math.round(sprite.y - top) - 2);
+      } else {
+        g.lineStyle(1, color).lineBetween(x + 6, sprite.y + 3, x + 10, top + 2);
+      }
+    }
   }
 
   private spotRect(spot: Spot, grow = 0): Phaser.Geom.Rectangle {

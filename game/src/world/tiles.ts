@@ -31,8 +31,8 @@ export type Facing = "left" | "down" | "up" | "right";
 const FACING_COL: Record<Facing, number> = { left: 0, down: 1, up: 2, right: 3 };
 
 export const CHARACTERS = {
-  mia: 0, // red hair, green shirt
-  ada: 1, // long brown hair, red shirt (Petra, Rosa, the nurse)
+  mia: 0, // red hair, green shirt (Mia, Rosa)
+  ada: 1, // long brown hair, red shirt (Ada, Petra, the nurse)
   elder: 2, // grey hair and beard (male only)
   worker: 3, // hard hat
   sam: 4, // bald, grey shirt

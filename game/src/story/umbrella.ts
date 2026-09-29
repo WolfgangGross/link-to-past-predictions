@@ -7,7 +7,6 @@ import type { UIScene } from "../scenes/UIScene";
 import type { Sky } from "../world/weather";
 import { prefetchLeo } from "./leo";
 import { prefetchTraffic } from "./schoolRun";
-import { sealGuesses } from "../predict/player";
 import { sfx } from "../audio";
 
 const BASE_RATE = 0.195; // share of rainy school runs in the training data
@@ -21,18 +20,14 @@ const CARD: JudgmentCard = {
   oldRule: '"Always pack umbrellas": cheap, reliable, no forecast needed.',
 };
 
-let forecast: number | undefined; // the phone's rain chance, once asked
-
-/**
- * What the flat's windows show. Before the phone has spoken it is the sky as it is at 06:30 (the held-out
- * morning's own measurements); afterwards it is the phone's forecast: sun, clouds, rain or thunder.
- */
-export function currentSky(): Sky {
-  if (forecast !== undefined) return forecast >= 0.65 ? "thunder" : forecast >= 0.4 ? "rain" : forecast >= 0.2 ? "clouds" : "sun";
+/** What the flat's windows show: the sky at 06:30 (the held-out morning's own measurements), picked once so the glass and the text always agree. */
+const morningSky: Sky = (() => {
   const f = rolls.morning.features;
   if (f.rain_last_3h_mm > 0.2) return f.rain_last_3h_mm >= 4 && f.wind_kmh >= 10 ? "thunder" : "rain";
   return f.cloud_cover_pct >= 60 ? "clouds" : "sun";
-}
+})();
+
+export const currentSky = (): Sky => morningSky;
 
 const SKY_LINE: Record<Sky, string> = {
   sun: "Sun over Freiburg.",
@@ -77,7 +72,6 @@ export async function pickUpPhone(ui: UIScene): Promise<void> {
   state.hasPhone = true;
   prefetchRain();
   prefetchLeo();
-  void sealGuesses(["umbrella", "sick_kid"]).then((msg) => msg && ui.toast.show(msg));
 }
 
 export async function lookOutOfWindow(ui: UIScene): Promise<void> {
@@ -116,7 +110,6 @@ export async function lookOutOfWindow(ui: UIScene): Promise<void> {
   }
 
   const p = result.rows[0].rain;
-  forecast = p;
   const take = p >= threshold;
   state.phoneNotes.push(`Rain at 8:00: ${pct(p)}`);
   ui.phone.showProbability("RAIN ON THE SCHOOL RUN", p, threshold, [

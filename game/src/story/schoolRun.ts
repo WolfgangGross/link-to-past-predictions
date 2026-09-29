@@ -47,8 +47,10 @@ const rowIndex = (depart: number, route: Route) => DEPARTURES.indexOf(depart) * 
 
 export async function schoolRun(ui: UIScene): Promise<void> {
   ui.setClock("07:45");
+  const raining = await willItRain();
   await ui.dialogue.say([
     "7:45. Shoes on. School starts at 8:15.",
+    `${raining ? "Rain drums on the windows. The roads will be slow." : "Dry out there."} ${state.umbrellas ? "The umbrellas are by the door." : "No umbrellas by the door."}`,
     "The rule: LEAVE 30 MINUTES EARLY. You'll wait at the gate, but you're never late.",
   ]);
   const pick = await ui.dialogue.choose("When do you leave?", ["Follow the rule: leave now", "Ask the phone"], 1);

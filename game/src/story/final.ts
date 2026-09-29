@@ -5,7 +5,6 @@ import { predictClasses, type ClassPrediction, type NoSignal } from "../predict/
 import { rolls } from "../data/rolls";
 import { logJudgment, pct, state, type JudgmentCard } from "../state";
 import type { UIScene } from "../scenes/UIScene";
-import { sealGuesses } from "../predict/player";
 
 const MIA = rolls.mia;
 const AGE_WORD = ["", "", "", "", "", "", "", "seven", "eight", "nine", "ten"];
@@ -74,7 +73,7 @@ async function decideFinal(ui: UIScene): Promise<void> {
     `Full game, ${pct(full)} (OK for: ${describe(agree(full))})`,
     `Second half, ${pct(half)} (OK for: ${describe(agree(half))})`,
     "She sits out",
-  ]);
+  ], 0, agree(full).includes("You") ? 0 : agree(half).includes("You") ? 1 : 2);
   await ui.phone.close();
   const kind = (["full", "half", "sit"] as const)[choice];
   await play(ui, kind, "prediction", kind === "sit" ? undefined : kind === "full" ? full : half, yours);
@@ -109,7 +108,6 @@ export const fieldStory: Story = {
   async onEnter({ ui }) {
     ui.setClock("16:25");
     prefetchRisk();
-    void sealGuesses(["final"]).then((msg) => msg && ui.toast.show(msg));
     await ui.dialogue.say("The pitch behind the school. The final starts in five minutes. Karim, the physio, is checking Mia's ankle.");
   },
   interact: {
