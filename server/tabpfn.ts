@@ -45,6 +45,26 @@ interface FileUploadInfo {
   required_headers: Record<string, string>;
 }
 
+// CRC32C (Castagnoli), base64 of the big-endian value — the API's dedup hash for uploads.
+const CRC32C_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0x82f63b78 ^ (c >>> 1) : c >>> 1;
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+
+export function crc32cBase64(data: string): string {
+  const bytes = new TextEncoder().encode(data);
+  let crc = 0xffffffff;
+  for (const b of bytes) crc = CRC32C_TABLE[(crc ^ b) & 0xff] ^ (crc >>> 8);
+  crc = (crc ^ 0xffffffff) >>> 0;
+  const be = new Uint8Array([crc >>> 24, (crc >>> 16) & 0xff, (crc >>> 8) & 0xff, crc & 0xff]);
+  return btoa(String.fromCharCode(...be));
+}
+
 export function toCsv(rows: Row[], columns: string[]): string {
   const escape = (v: Cell): string => {
     if (v === null || v === undefined) return "";
@@ -78,24 +98,24 @@ export class TabPFNClient {
   ): Promise<string> {
     if (X.length === 0 || X.length !== y.length) throw new Error("X and y must be non-empty and equal length");
     const columns = Object.keys(X[0]);
+    const xCsv = toCsv(X, columns);
+    const yCsv = toCsv(y.map((v) => ({ target: v })), ["target"]);
 
+    // With content hashes, identical data is recognised server-side (409) and neither re-uploaded nor re-fitted.
     let t = performance.now();
     const prep = await this.post<{
       train_set_upload_id: string;
       x_train_info?: FileUploadInfo;
       y_train_info?: FileUploadInfo;
     }>("/tabpfn/prepare_train_set_upload", {
-      x_train_info: { format: "csv" },
-      y_train_info: { format: "csv" },
+      x_train_info: { format: "csv", hash: crc32cBase64(xCsv), size_bytes: xCsv.length },
+      y_train_info: { format: "csv", hash: crc32cBase64(yCsv), size_bytes: yCsv.length },
     }, { allowDuplicate: true });
     timings.prepare_train = performance.now() - t;
 
     t = performance.now();
     if (prep.x_train_info && prep.y_train_info) {
-      await Promise.all([
-        this.upload(prep.x_train_info, toCsv(X, columns)),
-        this.upload(prep.y_train_info, toCsv(y.map((v) => ({ target: v })), ["target"])),
-      ]);
+      await Promise.all([this.upload(prep.x_train_info, xCsv), this.upload(prep.y_train_info, yCsv)]);
     }
     timings.upload_train = performance.now() - t;
 

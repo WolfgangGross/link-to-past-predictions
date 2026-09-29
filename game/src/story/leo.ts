@@ -41,6 +41,7 @@ export async function talkToLeo(ui: UIScene): Promise<void> {
   await ui.dialogue.say([`Leo: "${s.said}..."`, ...(s.test_today ? ['Ada: "Spelling test today, huh?"', 'Leo: "...maybe."'] : [])]);
   if (!state.hasPhone) return;
 
+  ui.setClock("07:05");
   await ui.dialogue.say('Sam (from the kitchen): "School rule: any symptom, he stays home. And then one of us stays with him."');
   const pick = await ui.dialogue.choose("Leo?", ["Follow the rule: Leo stays home", "Check his temperature, ask the phone"]);
   if (pick === 0) {

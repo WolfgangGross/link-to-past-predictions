@@ -2,7 +2,8 @@
 
 import type { Story } from "../world/WorldScene";
 import { state } from "../state";
-import { lookOutOfWindow, pickUpPhone, rainOutcome } from "./umbrella";
+import { lookOutOfWindow, pickUpPhone } from "./umbrella";
+import { schoolRun } from "./schoolRun";
 import { talkToLeo } from "./leo";
 
 export const homeStory: Story = {
@@ -22,17 +23,13 @@ export const homeStory: Story = {
     sam: ({ ui }) => ui.dialogue.say(['Sam: "Coffee is brewing. Leo says he feels hot. Can you check on him?"']),
     mia: ({ ui }) => ui.dialogue.say(['Mia: "Is it going to rain? I have my football final today!"']),
     leo: ({ ui }) => talkToLeo(ui),
-    async door({ ui }) {
+    async door({ ui, world }) {
       if (!state.hasPhone) return ui.dialogue.say("Wait. Something on the nightstand is glowing.");
       if (state.umbrellas === undefined) return ui.dialogue.say("Umbrellas or not? Better check the sky from the window first.");
       if (state.leoHome === undefined) return ui.dialogue.say("Leo is still in bed. Better check on him first.");
-      await ui.dialogue.say([
-        state.leoHome ? "8:00. Out the door with Mia. Leo waves from the window." : "8:00. Out the door with Mia and Leo...",
-        ...(await rainOutcome()),
-        "To be continued: the school run, the office, and Mia's big final.",
-        "Thanks for playing this early build!",
-      ]);
-      window.location.reload();
+      if (!state.schoolRun) await schoolRun(ui);
+      await ui.dialogue.say(state.leoHome ? "Out the door with Mia. Leo waves from the window." : "Out the door with Mia and Leo.");
+      world.goto("street");
     },
   },
 };

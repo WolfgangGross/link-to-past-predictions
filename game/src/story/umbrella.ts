@@ -5,6 +5,7 @@ import { weatherFor } from "../data/scenarios";
 import { logJudgment, pct, state, today, type JudgmentCard } from "../state";
 import type { UIScene } from "../scenes/UIScene";
 import { prefetchLeo } from "./leo";
+import { prefetchTraffic } from "./schoolRun";
 
 const BASE_RATE = 0.195; // share of rainy school runs in the training data
 
@@ -18,7 +19,19 @@ const CARD: JudgmentCard = {
 };
 
 let rain: Promise<ClassPrediction | NoSignal> | undefined;
-let rainedOnSchoolRun: boolean | undefined;
+let rainFalls: Promise<boolean> | undefined;
+
+/**
+ * Whether it rains on the school run. Decided once, as soon as the umbrellas are settled, by sampling
+ * the phone's own probability (even if you never looked): 30% comes true 3 times in 10.
+ */
+export function willItRain(): Promise<boolean> {
+  rainFalls ??= (async () => {
+    const result = rain ? await rain : undefined;
+    return Math.random() < (result?.ok ? result.rows[0].rain : BASE_RATE);
+  })();
+  return rainFalls;
+}
 
 /** Start the TabPFN call as soon as the phone is in hand, so it is ready at the window. */
 export function prefetchRain(): void {
@@ -88,12 +101,11 @@ export async function lookOutOfWindow(ui: UIScene): Promise<void> {
   await ui.card.show(CARD);
 }
 
-/** Resolves the rain once the family is outside. Returns lines for the street scene. */
+/** Lines for when the family steps outside. */
 export async function rainOutcome(): Promise<string[]> {
-  // The world samples from the phone's own probability, even if you never looked: 30% comes true 3 times in 10.
+  const rainedOnSchoolRun = await willItRain();
   const result = rain ? await rain : undefined;
   const chance = result?.ok ? result.rows[0].rain : BASE_RATE;
-  rainedOnSchoolRun ??= Math.random() < chance;
   const judgment = state.judgments.find((j) => j.scene === "umbrella");
   if (judgment) judgment.outcome = rainedOnSchoolRun ? "rain" : "dry";
   const kids = state.leoHome ? "Mia" : "Mia and Leo";
@@ -107,6 +119,7 @@ export async function rainOutcome(): Promise<string[]> {
 
 function decide(umbrellas: boolean, choice: "rule" | "prediction" | "no_signal", threshold?: number, predicted?: number): void {
   state.umbrellas = umbrellas;
+  void willItRain().then(prefetchTraffic);
   logJudgment(
     { scene: "umbrella", clock: "06:40", choice, threshold, predicted, action: umbrellas ? "umbrellas" : "no umbrellas", costOn: "family" },
     CARD,

@@ -102,6 +102,21 @@ async function closeCard(name: string) {
   await press("Space");
 }
 
+/** Keep advancing dialogue until the world has switched to the given map. */
+async function readUntilMap(key: string, timeoutMs = 30_000) {
+  const end = Date.now() + timeoutMs;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  while ((await page.evaluate(() => (window as any).__game.scene.getScene("world").mapKey)) !== key) {
+    if (Date.now() > end) throw new Error(`Timed out waiting for map ${key}`);
+    const s = await uiState();
+    if (s.dialog === "line") {
+      console.log("  >", s.text.replace(/\n/g, " "));
+      await press("Space");
+    }
+    await page.waitForTimeout(150);
+  }
+}
+
 async function teleport(col: number, row: number, facing: string) {
   await page.evaluate(
     ([c, r, f]) => (window as any).__game.scene.getScene("world").teleport(c, r, f), // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -160,13 +175,39 @@ if (!useRules) {
 }
 await read();
 
-console.log("door");
+console.log("school run");
 await teleport(11.5, 13, "down");
 await page.keyboard.down("ArrowDown");
 await page.waitForTimeout(400);
 await page.keyboard.up("ArrowDown");
 await until((s) => s.dialog === "line", "door dialogue");
-await shot("outside");
+await read();
+await choose(useRules ? 0 : 1);
+if (!useRules) {
+  await dial(0); // "late once in 10 runs"
+  await until((s) => s.dialog === "line", "traffic prediction", 60_000);
+  await shot("school-run-distributions");
+  await read();
+  await choose(0);
+}
+await read();
+
+console.log("street");
+await readUntilMap("street");
+await page.waitForTimeout(600);
+await shot("street-arrival");
+const arrival = await read();
+if (arrival.card) await closeCard("school-run-card");
+await teleport(8, 7.1, "up");
+await talk();
+await shot("cafe");
+await teleport(22, 7.1, "up");
+await talk();
+await teleport(36.5, 11.5, "right");
+await page.keyboard.down("ArrowRight");
+await page.waitForTimeout(500);
+await page.keyboard.up("ArrowRight");
+await until((s) => s.dialog === "line", "tram");
 await read().catch(() => undefined); // the build ends with a page reload
 
 console.log(errors.length ? `ERRORS:\n${errors.join("\n")}` : "no page errors");

@@ -118,6 +118,58 @@ export class Phone {
     }
   }
 
+  /** Like dial(), but over a fixed list of values (e.g. "1 in 10"). Returns the chosen value. */
+  async pick<T>(heading: string, question: string, values: T[], format: (v: T) => string, initial = 0): Promise<T> {
+    let i = initial;
+    const render = () => {
+      this.reset("<-/-> adjust  SPACE ok");
+      this.add(this.scene.add.text(0, 0, heading, textStyle(8, COLORS.accent, INNER)));
+      this.add(this.scene.add.text(0, 24, question, textStyle(8, COLORS.paper, INNER)));
+      this.add(this.scene.add.text(0, 96, format(values[i]), textStyle(16, COLORS.accent, INNER)));
+    };
+    render();
+    this.dialing = true;
+    for (;;) {
+      const key = await nextKey(this.scene, [...CONFIRM, ...LEFT, ...RIGHT]);
+      if (CONFIRM.includes(key)) {
+        this.dialing = false;
+        return values[i];
+      }
+      i = Phaser.Math.Clamp(i + (LEFT.includes(key) ? -1 : 1), 0, values.length - 1);
+      render();
+    }
+  }
+
+  /**
+   * Box plots on a shared time axis: box = 25–75%, whiskers = 10–98%, tick = median.
+   * `deadline` draws a red line; values are minutes on the axis [min, max].
+   */
+  showDistributions(
+    heading: string,
+    rows: { label: string; q: Record<number, number> }[],
+    axis: { min: number; max: number; deadline: number; format: (v: number) => string },
+    lines: string[],
+  ): void {
+    this.reset("SPACE continue");
+    this.add(this.scene.add.text(0, 0, heading, textStyle(8, COLORS.accent, INNER)));
+    const g = this.add(this.scene.add.graphics());
+    const x = (v: number) => Math.round(((Phaser.Math.Clamp(v, axis.min, axis.max) - axis.min) / (axis.max - axis.min)) * INNER);
+    rows.forEach((r, i) => {
+      const y = 26 + i * 30;
+      this.add(this.scene.add.text(0, y, r.label, textStyle(8, COLORS.paper)));
+      const by = y + 12;
+      g.lineStyle(1, COLORS.muted, 1).lineBetween(x(r.q[0.1]), by + 4, x(r.q[0.98]), by + 4);
+      g.fillStyle(COLORS.rain, 1).fillRect(x(r.q[0.25]), by, Math.max(2, x(r.q[0.75]) - x(r.q[0.25])), 9);
+      g.fillStyle(COLORS.paper, 1).fillRect(x(r.q[0.5]) - 1, by - 1, 2, 11);
+    });
+    const dx = x(axis.deadline);
+    g.fillStyle(COLORS.danger, 1).fillRect(dx - 1, 22, 2, rows.length * 30 + 2);
+    const axisY = 30 + rows.length * 30;
+    this.add(this.scene.add.text(0, axisY, axis.format(axis.min), textStyle(8, COLORS.muted)));
+    this.add(this.scene.add.text(INNER, axisY, axis.format(axis.max), textStyle(8, COLORS.muted)).setOrigin(1, 0));
+    this.add(this.scene.add.text(0, axisY + 18, lines.join("\n"), textStyle(8, COLORS.muted, INNER)));
+  }
+
   private drawBar(y: number, fill: number, marker?: number): void {
     const g = this.add(this.scene.add.graphics());
     g.fillStyle(COLORS.ink, 1).fillRect(0, y, INNER, 10);

@@ -38,3 +38,33 @@ export async function predictClasses(
     return { ok: false, reason: (err as Error).name === "TimeoutError" ? "timeout" : "network" };
   }
 }
+
+export interface QuantilePrediction {
+  ok: true;
+  /** One entry per requested row: quantile level → value. */
+  rows: Record<number, number>[];
+  trainRows: number;
+}
+
+export async function predictQuantiles(
+  dataset: string,
+  rows: Row[],
+  timeoutMs = 45_000,
+): Promise<QuantilePrediction | NoSignal> {
+  try {
+    const res = await fetch("/api/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dataset, rows }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    const body = await res.json();
+    if (!res.ok) return { ok: false, reason: body.error ?? `HTTP ${res.status}` };
+    const qs = body.quantiles as number[];
+    const pred = body.prediction as number[][]; // [quantile][row]
+    const out = rows.map((_, i) => Object.fromEntries(qs.map((q, j) => [q, pred[j][i]])));
+    return { ok: true, rows: out, trainRows: body.trainRows };
+  } catch (err) {
+    return { ok: false, reason: (err as Error).name === "TimeoutError" ? "timeout" : "network" };
+  }
+}

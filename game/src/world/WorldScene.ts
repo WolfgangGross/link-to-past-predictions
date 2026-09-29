@@ -132,6 +132,10 @@ export class WorldScene extends Phaser.Scene {
 
   // ---- API for story scripts -------------------------------------------------
 
+  get mapKey(): string {
+    return this.def.key;
+  }
+
   /** Leaves this map and enters another. */
   goto(map: string): void {
     this.leaving = true;
@@ -168,7 +172,7 @@ export class WorldScene extends Phaser.Scene {
     const px = this.player.x + dir[0] * 12;
     const py = this.player.y + 4 + dir[1] * 12;
     for (const [id, npc] of this.npcs) {
-      if (npc.sprite.getBounds().contains(px, py) && this.story.interact[id]) {
+      if (Phaser.Geom.Rectangle.Inflate(npc.sprite.getBounds(), 4, 4).contains(px, py) && this.story.interact[id]) {
         this.faceNpc(id);
         return this.run(this.story.interact[id]);
       }

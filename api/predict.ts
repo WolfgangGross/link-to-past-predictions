@@ -3,7 +3,7 @@
 import { datasetNames, parseRequest, predict, RequestError } from "../server/predict.js";
 import { TabPFNError } from "../server/tabpfn.js";
 
-export const config = { maxDuration: 30 };
+export const config = { maxDuration: 60 };
 
 // Best-effort per-instance limit; the real guard is the TabPFN token budget.
 const WINDOW_MS = 60_000;

@@ -1,5 +1,6 @@
 import * as Phaser from "phaser";
 import { CHARACTERS, SHEETS, SHEET_ORDER, charFrame, type Character, type Facing } from "../world/tiles";
+import { fakeMorning } from "../state";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -23,6 +24,12 @@ export class BootScene extends Phaser.Scene {
         });
       }
     }
-    this.scene.start("title");
+    const jump = new URLSearchParams(window.location.search).get("map");
+    if (jump) {
+      fakeMorning();
+      this.scene.start("world", { map: jump });
+    } else {
+      this.scene.start("title");
+    }
   }
 }

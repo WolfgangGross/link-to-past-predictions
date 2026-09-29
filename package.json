@@ -8,7 +8,8 @@
     "typecheck": "tsc",
     "spike": "tsx --env-file=.env scripts/spike-tabpfn.ts",
     "data:weather": "uv run --no-project data/build_weather.py",
-    "data:symptoms": "uv run --no-project data/build_symptoms.py"
+    "data:symptoms": "uv run --no-project data/build_symptoms.py",
+    "data:traffic": "uv run --no-project data/build_traffic.py"
   },
   "dependencies": {
     "phaser": "^4.2.1"

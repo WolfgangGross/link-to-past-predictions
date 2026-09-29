@@ -4,12 +4,15 @@
 import { TabPFNClient, TabPFNError, type Cell, type PredictParams, type Row, type Task } from "./tabpfn.js";
 import * as weather from "./datasets/weather.js";
 import * as symptoms from "./datasets/symptoms.js";
+import * as traffic from "./datasets/traffic.js";
 
 interface WorldDataset {
   task: Task;
   columns: readonly string[];
-  /** Columns that hold free text (TabPFN-3.5 reads them directly); all others must be numbers. */
+  /** Columns that hold free text (TabPFN-3.5 reads them directly). */
   textColumns?: readonly string[];
+  /** String columns restricted to known values. All other columns must be numbers. */
+  categories?: Record<string, readonly string[]>;
   X: Cell[][];
   y: Cell[];
   predict: PredictParams;
@@ -34,6 +37,15 @@ const WORLD: Record<string, WorldDataset> = {
     predict: { output_type: "probas" },
     maxTestRows: 4,
   },
+  traffic: {
+    task: "regression",
+    columns: traffic.columns,
+    categories: { route: traffic.routes },
+    X: traffic.X,
+    y: traffic.y,
+    predict: { output_type: "quantiles", quantiles: [0.1, 0.25, 0.5, 0.75, 0.8, 0.9, 0.95, 0.98] },
+    maxTestRows: 12,
+  },
 };
 
 const MAX_TEXT = 200;
@@ -47,6 +59,8 @@ export interface PredictResponse {
   dataset: string;
   prediction: unknown;
   classes?: string[];
+  /** For quantile regression: prediction[q][row] matches quantiles[q]. */
+  quantiles?: number[];
   trainRows: number;
   cached: boolean;
   ms: number;
@@ -77,7 +91,10 @@ export function parseRequest(body: unknown): PredictRequest {
     const out: Row = {};
     for (const col of ds.columns) {
       const v = (row as Record<string, unknown>)[col];
-      if (ds.textColumns?.includes(col)) {
+      const allowed = ds.categories?.[col];
+      if (allowed) {
+        if (typeof v !== "string" || !allowed.includes(v)) throw new RequestError(`Row ${i}: ${col} must be one of ${allowed.join(", ")}`);
+      } else if (ds.textColumns?.includes(col)) {
         if (typeof v !== "string" || v.length > MAX_TEXT) throw new RequestError(`Row ${i}: ${col} must be text up to ${MAX_TEXT} chars`);
       } else if (typeof v !== "number" || !Number.isFinite(v)) {
         throw new RequestError(`Row ${i}: ${col} must be a finite number`);
@@ -96,7 +113,7 @@ const MAX_CACHED_RESPONSES = 500;
 
 let client: TabPFNClient | undefined;
 function getClient(): TabPFNClient {
-  client ??= new TabPFNClient({ apiKey: process.env.TABPFN_API_KEY ?? "", timeoutMs: 25_000 });
+  client ??= new TabPFNClient({ apiKey: process.env.TABPFN_API_KEY ?? "", timeoutMs: 50_000 });
   return client;
 }
 
@@ -134,6 +151,7 @@ export async function predict(req: PredictRequest): Promise<PredictResponse> {
     dataset: req.dataset,
     prediction: result.prediction,
     classes: ds.task === "classification" ? [...new Set(ds.y.map(String))].sort() : undefined,
+    quantiles: ds.predict.output_type === "quantiles" ? ds.predict.quantiles : undefined,
     trainRows: ds.X.length,
     cached: false,
     ms: Math.round(performance.now() - start),
