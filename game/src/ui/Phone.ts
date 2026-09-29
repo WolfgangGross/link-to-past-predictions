@@ -1,6 +1,8 @@
 import * as Phaser from "phaser";
 import { COLORS, WIDTH, textStyle } from "../theme";
-import { CONFIRM, LEFT, RIGHT, nextKey } from "./keys";
+import { ApiPanel } from "./ApiPanel";
+import { CONFIRM, DOWN, LEFT, RIGHT, UP, nextKey } from "./keys";
+import { sfx } from "../audio";
 
 export interface PhonePage {
   title: string;
@@ -12,6 +14,7 @@ const H = 244;
 const OPEN_X = WIDTH - W - 16;
 const SCREEN = { x: 8, y: 26, w: W - 16, h: H - 60 };
 const INNER = SCREEN.w - 16;
+const STEP = 12; // pixels per arrow-key press when a page is taller than the screen
 
 /** The Phone of Priors: shows predictions and asks for your threshold. */
 export class Phone {
@@ -19,8 +22,11 @@ export class Phone {
   private readonly root: Phaser.GameObjects.Container;
   private readonly content: Phaser.GameObjects.Container;
   private readonly hint: Phaser.GameObjects.Text;
+  private readonly api: ApiPanel;
   private thinkingTimer?: Phaser.Time.TimerEvent;
   private opened = false;
+  /** Set while the current page is taller than the screen; UP/DOWN scroll it. */
+  private scroll?: { text: Phaser.GameObjects.Text; bar: Phaser.GameObjects.Graphics; top: number; viewH: number; max: number; pos: number };
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -32,6 +38,12 @@ export class Phone {
     this.hint = scene.add.text(14, H - 26, "", textStyle(8, COLORS.muted));
     this.content = scene.add.container(SCREEN.x + 8, SCREEN.y + 10);
     this.root = scene.add.container(WIDTH + 8, 12, [body, title, this.content, this.hint]).setDepth(90);
+    this.api = new ApiPanel(scene, { x: 16, y: 12, w: OPEN_X - 32, h: H });
+    scene.input.keyboard!.on("keydown", (e: KeyboardEvent) => {
+      if (!this.opened || !this.scroll) return;
+      if (UP.includes(e.code)) this.scrollBy(-STEP);
+      else if (DOWN.includes(e.code)) this.scrollBy(STEP);
+    });
   }
 
   /** Autopilot: returns yesterday's value for this question, or undefined to ask the player. */
@@ -49,20 +61,41 @@ export class Phone {
   open(): Promise<void> {
     if (this.opened) return Promise.resolve();
     this.opened = true;
+    sfx.phoneOpen();
     return this.slideTo(OPEN_X);
   }
 
   close(): Promise<void> {
     if (!this.opened) return Promise.resolve();
     this.opened = false;
+    sfx.phoneClose();
     this.stopThinking();
+    this.api.hide();
     return this.slideTo(WIDTH + 8);
   }
 
   showLines(heading: string, lines: string[], hint = ""): void {
     this.reset(hint);
     this.add(this.scene.add.text(0, 0, heading, textStyle(8, COLORS.accent, INNER)));
-    this.add(this.scene.add.text(0, 24, lines.join("\n\n"), textStyle(8, COLORS.paper, INNER)).setLineSpacing(4));
+    const top = 24;
+    const body = this.add(this.scene.add.text(0, top, lines.join("\n\n"), textStyle(8, COLORS.paper, INNER)).setLineSpacing(4));
+    const viewH = SCREEN.h - 10 - top - 4;
+    if (body.height <= viewH) return;
+    // Too long for the screen: show a window onto the text and a scroll bar beside it.
+    body.setCrop(0, 0, INNER, viewH);
+    const bar = this.add(this.scene.add.graphics());
+    this.scroll = { text: body, bar, top, viewH, max: body.height - viewH, pos: 0 };
+    this.scrollBy(0);
+  }
+
+  private scrollBy(delta: number): void {
+    const s = this.scroll;
+    if (!s) return;
+    s.pos = Phaser.Math.Clamp(s.pos + delta, 0, s.max);
+    s.text.setCrop(0, s.pos, INNER, s.viewH).setY(s.top - s.pos); // the crop keeps its place inside the texture, so shift the text up
+    const thumb = Math.max(10, Math.round((s.viewH * s.viewH) / (s.viewH + s.max)));
+    const y = s.top + Math.round(((s.viewH - thumb) * s.pos) / s.max);
+    s.bar.clear().fillStyle(COLORS.ink, 1).fillRect(INNER + 3, s.top, 3, s.viewH).fillStyle(COLORS.accent, 1).fillRect(INNER + 3, y, 3, thumb);
   }
 
   /** TAB view: flip through pages until TAB or Escape closes the phone. */
@@ -80,31 +113,36 @@ export class Phone {
     await this.close();
   }
 
-  thinking(heading: string): void {
+  thinking(heading: string, dataset: string): void {
     this.reset("asking TabPFN-3.5");
+    this.api.watch(dataset);
     this.add(this.scene.add.text(0, 0, heading, textStyle(8, COLORS.accent, INNER)));
     const dots = this.add(this.scene.add.text(0, 60, "", textStyle(16, COLORS.paper)));
     let n = 0;
     this.thinkingTimer = this.scene.time.addEvent({
       delay: 250,
       loop: true,
-      callback: () => dots.setText(".".repeat((n++ % 4) + 1)),
+      callback: () => {
+        sfx.think(n);
+        dots.setText(".".repeat((n++ % 4) + 1));
+      },
     });
   }
 
   showProbability(heading: string, p: number, threshold: number | undefined, lines: string[]): void {
     this.reset("SPACE continue");
     this.add(this.scene.add.text(0, 0, heading, textStyle(8, COLORS.accent, INNER)));
+    sfx.result();
     this.add(this.scene.add.text(0, 30, `${Math.round(p * 100)}%`, textStyle(24, COLORS.paper)));
     this.drawBar(70, p, threshold);
     this.add(this.scene.add.text(0, 92, lines.join("\n"), textStyle(8, COLORS.muted, INNER)));
   }
 
   /** Lets the player set a threshold (0–100%) before seeing the prediction. */
-  async dial(heading: string, question: string, initial = 50, step = 5): Promise<number> {
+  async dial(heading: string, question: string, initial = 50, step = 5, op: ">=" | "<" = ">="): Promise<number> {
     const auto = this.autoValue?.(question);
     if (auto !== undefined) {
-      this.showLines("AUTOPILOT", [question, `>= ${Math.round(auto * 100)}%`, "Your line from yesterday."], "");
+      this.showLines("AUTOPILOT", [question, `${op} ${Math.round(auto * 100)}%`, "Your line from yesterday."], "");
       await new Promise((r) => this.scene.time.delayedCall(1200, r));
       return auto;
     }
@@ -113,7 +151,7 @@ export class Phone {
       this.reset("<-/-> adjust  SPACE ok");
       this.add(this.scene.add.text(0, 0, heading, textStyle(8, COLORS.accent, INNER)));
       this.add(this.scene.add.text(0, 24, question, textStyle(8, COLORS.paper, INNER)));
-      this.add(this.scene.add.text(0, 86, `>= ${value}%`, textStyle(16, COLORS.accent)));
+      this.add(this.scene.add.text(0, 86, `${op} ${value}%`, textStyle(16, COLORS.accent)));
       this.drawBar(116, 0, value / 100);
     };
     render();
@@ -125,6 +163,7 @@ export class Phone {
         this.onValue?.(question, value / 100);
         return value / 100;
       }
+      sfx.tick();
       value = Phaser.Math.Clamp(value + (LEFT.includes(key) ? -step : step), 0, 100);
       render();
     }
@@ -154,6 +193,7 @@ export class Phone {
         this.onValue?.(question, values[i]);
         return values[i];
       }
+      sfx.tick();
       i = Phaser.Math.Clamp(i + (LEFT.includes(key) ? -1 : 1), 0, values.length - 1);
       render();
     }
@@ -222,6 +262,7 @@ export class Phone {
 
   private reset(hint: string): void {
     this.stopThinking();
+    this.scroll = undefined;
     this.content.removeAll(true);
     this.hint.setText(hint);
   }

@@ -7,6 +7,9 @@ export const WORLD_ZOOM = 2;
 
 export const FONT = '"Press Start 2P", monospace';
 
+/** Developer-tool surfaces (network panel, desktop): small, dense, readable. */
+export const MONO = '"JetBrains Mono", monospace';
+
 export const COLORS = {
   night: 0x0e0e12,
   ink: 0x1b1b2a,

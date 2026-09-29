@@ -1,6 +1,7 @@
 // Scene 7 — GPU allocation (the book's Flint example): efficient by prediction, or visibly fair by rule?
 
 import { predictQuantiles, type NoSignal, type QuantilePrediction } from "../predict/api";
+import { rolls } from "../data/rolls";
 import { sampleFromQuantiles } from "../predict/sample";
 import { logJudgment, state, type JudgmentCard } from "../state";
 import type { UIScene } from "../scenes/UIScene";
@@ -12,15 +13,26 @@ interface Proposal {
   row: { title: string; team: string; log10_rows: number; gpu_days: number; novelty: number };
 }
 
-const P = (id: string, short: string, team: Proposal["team"], title: string, log10_rows: number, gpu_days: number, novelty: number): Proposal => ({
-  id,
-  short,
-  team,
-  row: { title, team, log10_rows, gpu_days, novelty },
-});
+// Each proposal's scale, compute and novelty are nudged a little every playthrough (titles that name a size keep it).
+let n = 0;
+const P = (id: string, short: string, team: Proposal["team"], title: string, log10_rows: number, gpu_days: number, novelty: number, fixedRows = false): Proposal => {
+  const j = rolls.gpu[n++];
+  return {
+    id,
+    short,
+    team,
+    row: {
+      title,
+      team,
+      log10_rows: fixedRows ? log10_rows : Math.min(6.5, Math.max(4, Number((log10_rows + j.rows).toFixed(1)))),
+      gpu_days: Math.min(40, Math.max(2, Math.round(gpu_days * j.days))),
+      novelty: Math.min(5, Math.max(1, novelty + j.novelty)),
+    },
+  };
+};
 
 export const PROPOSALS: Proposal[] = [
-  P("chunked", "Chunked", "scaling", "Chunked row attention for 1M rows", 6.0, 30, 4),
+  P("chunked", "Chunked", "scaling", "Chunked row attention for 1M rows", 6.0, 30, 4, true),
   P("memory", "Memory tok", "scaling", "Longer context via memory tokens", 6.0, 20, 4),
   P("textenc", "Text enc", "multimodal", "Joint text encoder for free-text columns", 5.0, 25, 5),
   P("tokenizer", "Tokenizer", "multimodal", "Bigger tokenizer vocabulary", 5.0, 8, 2),
@@ -59,12 +71,12 @@ export async function allocateGpus(ui: UIScene): Promise<void> {
     'Petra: "Four GPU nodes this week. Eight proposals. How do we split them?"',
     'Petra: "The rule: ONE NODE PER TEAM. Each team runs its favourite. Fair, visible, nobody sulks."',
   ]);
-  const pick = await ui.dialogue.choose("Allocation?", ["Follow the rule: one per team", "Ask the phone to rank all eight"]);
+  const pick = await ui.dialogue.choose("Allocation?", ["Follow the rule: one per team", "Ask the phone to rank all eight"], 1);
   if (pick === 0) return fund(TEAM_PICKS, "rule");
 
   prefetchRanking();
   await ui.phone.open();
-  ui.phone.thinking("WHICH IDEAS WILL WORK?");
+  ui.phone.thinking("WHICH IDEAS WILL WORK?", "experiments");
   const result = await ranking!;
   if (!result.ok) {
     ui.phone.showLines("NO SIGNAL", ["I can't see the future right now.", "Back to the old rule."], "SPACE continue");

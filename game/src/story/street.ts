@@ -42,7 +42,7 @@ export const streetStory: Story = {
       }
       await ui.dialogue.say([
         'Nurse Brandt: "School rule: 38.0 °C and they go home. Leo is 37.5. In he goes."',
-        "Her line isn't yours or Sam's. It's one number for four hundred children.",
+        "Her line isn't yours or Charles's. It's one number for four hundred children.",
       ]);
     },
     async mia({ ui }) {

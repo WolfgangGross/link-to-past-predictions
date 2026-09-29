@@ -32,11 +32,11 @@ const FACING_COL: Record<Facing, number> = { left: 0, down: 1, up: 2, right: 3 }
 
 export const CHARACTERS = {
   mia: 0, // red hair, green shirt
-  ada: 1, // long brown hair, red shirt
-  elder: 2, // grey hair
+  ada: 1, // long brown hair, red shirt (Petra, Rosa, the nurse)
+  elder: 2, // grey hair and beard (male only)
   worker: 3, // hard hat
   sam: 4, // bald, grey shirt
-  leo: 5, // dark hair
+  leo: 5, // dark hair (headband painted out of urban.png)
 } as const;
 export type Character = keyof typeof CHARACTERS;
 

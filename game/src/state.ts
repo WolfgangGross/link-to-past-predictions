@@ -1,7 +1,5 @@
 // The day's state: story flags plus the log of judgments the phone will later learn from.
 
-import { DAYS, type DayScenario } from "./data/scenarios";
-
 export interface Judgment {
   scene: string;
   clock: string;
@@ -52,10 +50,6 @@ export const state = {
   dialLog: {} as Record<string, number>,
   autopilot: false,
 };
-
-export function today(): DayScenario {
-  return DAYS[state.day % DAYS.length];
-}
 
 /** Set by the UI: reveals the phone's sealed guess for this decision. */
 export const hooks = { onJudgment: (_j: Judgment) => {} };

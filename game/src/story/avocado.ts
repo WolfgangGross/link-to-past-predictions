@@ -1,17 +1,12 @@
 // Scene 8 — the canteen's avocados (the book's "AI bullwhip"): a better local decision, a jumpier chain.
 
+import { rolls } from "../data/rolls";
 import { predictQuantiles, type NoSignal, type QuantilePrediction } from "../predict/api";
 import { logJudgment, state, type JudgmentCard } from "../state";
 import type { UIScene } from "../scenes/UIScene";
 
 const RULE_ORDER = 40;
-const WEEK = [
-  { day: "Mon", menu: "pasta", temp_c: 14, team_event: 0 },
-  { day: "Tue", menu: "avocado_toast", temp_c: 15, team_event: 0 },
-  { day: "Wed", menu: "poke_bowl", temp_c: 13, team_event: 0 },
-  { day: "Thu", menu: "burrito_bowl", temp_c: 12, team_event: 1 },
-  { day: "Fri", menu: "schnitzel", temp_c: 11, team_event: 0 },
-];
+const WEEK = rolls.week;
 
 export const CARD: JudgmentCard = {
   title: "Avocados",
@@ -27,16 +22,15 @@ let forecast: Promise<QuantilePrediction | NoSignal> | undefined;
 export function prefetchForecast(): void {
   forecast ??= predictQuantiles(
     "avocados",
-    WEEK.map((d, i) => ({ weekday: i, month: 10, menu: d.menu, temp_c: d.temp_c, team_event: d.team_event, holiday_week: 0 })),
+    WEEK.map((d, i) => ({ weekday: i, month: rolls.morning.features.month, menu: d.menu, temp_c: d.temp_c, team_event: d.team_event, holiday_week: 0 })),
   );
 }
 
 /**
  * How swings grow up the chain when 20 canteens order by forecast and each tier chases the trend
- * it sees (orders = demand + change in demand). Seeded, so every player sees the same chain.
+ * it sees (orders = demand + change in demand). Seeded per playthrough.
  */
-export function bullwhip(orders: number[]): { canteen: number; distributor: number; farm: number } {
-  let seed = 7;
+export function bullwhip(orders: number[], seed = rolls.bullwhipSeed): { canteen: number; distributor: number; farm: number } {
   const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   const days = Array.from({ length: 20 }, (_, t) => orders[t % orders.length]);
   const demand = days.map((o) => Array.from({ length: 20 }, () => o * (0.85 + 0.3 * rand())).reduce((a, b) => a + b, 0));
@@ -57,13 +51,13 @@ export async function avocados(ui: UIScene): Promise<void> {
     'Rosa: "The rule: ORDER 40 A DAY. Hakan, my distributor, loves me. Same order every week for six years."',
   ]);
   ui.setClock("12:15");
-  const pick = await ui.dialogue.choose("Next week's order?", ["Follow the rule: 40 a day", "Ask the phone for a forecast"]);
+  const pick = await ui.dialogue.choose("Next week's order?", ["Follow the rule: 40 a day", "Ask the phone for a forecast"], 1);
   if (pick === 0) return decide(WEEK.map(() => RULE_ORDER), "rule");
 
   await ui.phone.open();
   const oneIn = await ui.phone.pick("YOUR JUDGMENT", "Running out of avocados is OK once in...", [2, 5, 10, 20], (v) => `${v} days`, 1);
   const level = 1 - 1 / oneIn;
-  ui.phone.thinking("NEXT WEEK'S AVOCADOS");
+  ui.phone.thinking("NEXT WEEK'S AVOCADOS", "avocados");
   prefetchForecast();
   const result = await forecast!;
   if (!result.ok) {

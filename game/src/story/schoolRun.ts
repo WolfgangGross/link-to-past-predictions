@@ -1,6 +1,7 @@
 // Scene 4 — the school run (the book's airport example): leave early by rule, or later by prediction.
 
 import { predictQuantiles, type NoSignal, type QuantilePrediction } from "../predict/api";
+import { rolls } from "../data/rolls";
 import { logJudgment, state, type JudgmentCard } from "../state";
 import { willItRain } from "./umbrella";
 import { sampleFromQuantiles } from "../predict/sample";
@@ -15,7 +16,6 @@ type Route = (typeof ROUTES)[number];
 
 const DEPARTURES = [45, 55, 65]; // minutes after 7:00
 export const SCHOOL_STARTS = 75; // 8:15
-const WEEKDAY = 1; // Tuesday
 const HERD_MINUTES = 6; // when every parent's phone sends them down the same road
 
 export const clock = (m: number) => `${7 + Math.floor(m / 60)}:${String(Math.floor(m) % 60).padStart(2, "0")}`;
@@ -37,7 +37,7 @@ export async function prefetchTraffic(): Promise<QuantilePrediction | NoSignal> 
     const rain = (await willItRain()) ? 1 : 0;
     traffic ??= predictQuantiles(
       "traffic",
-      DEPARTURES.flatMap((d) => ROUTES.map((r) => ({ route: r.id, depart_min: d, weekday: WEEKDAY, rain, roadworks_old_town: 1 }))),
+      DEPARTURES.flatMap((d) => ROUTES.map((r) => ({ route: r.id, depart_min: d, weekday: rolls.weekday, rain, roadworks_old_town: 1 }))),
     );
   }
   return traffic;
@@ -51,13 +51,13 @@ export async function schoolRun(ui: UIScene): Promise<void> {
     "7:45. Shoes on. School starts at 8:15.",
     "The rule: LEAVE 30 MINUTES EARLY. You'll wait at the gate, but you're never late.",
   ]);
-  const pick = await ui.dialogue.choose("When do you leave?", ["Follow the rule: leave now", "Ask the phone"]);
+  const pick = await ui.dialogue.choose("When do you leave?", ["Follow the rule: leave now", "Ask the phone"], 1);
   if (pick === 0) return depart(45, ROUTES[0], "rule");
 
   await ui.phone.open();
   const oneIn = await ui.phone.pick("YOUR JUDGMENT", "Being late is OK once in...", [2, 5, 10, 20, 50], (v) => `${v} runs`, 2);
   const level = 1 - 1 / oneIn; // 0.5 … 0.98: exactly the quantiles the server returns
-  ui.phone.thinking("THE SCHOOL RUN");
+  ui.phone.thinking("THE SCHOOL RUN", "traffic");
   const result = await prefetchTraffic();
   if (!result.ok) {
     ui.phone.showLines("NO SIGNAL", ["I can't see the future right now.", "Back to the old rule."], "SPACE continue");
@@ -99,7 +99,7 @@ export async function schoolRun(ui: UIScene): Promise<void> {
   const go = await ui.dialogue.choose("Well?", [`Leave at ${clock(best.depart)}`, "Leave now anyway"]);
   await ui.phone.close();
   if (go === 1) return depart(45, ROUTES[0], "rule", level);
-  if (gained > 0) await ui.dialogue.say(`${gained} extra minutes: pancakes with Mia. Sam steals one.`);
+  if (gained > 0) await ui.dialogue.say(`${gained} extra minutes: pancakes with Mia. Charles steals one.`);
   return depart(best.depart, best.route, "prediction", level);
 }
 

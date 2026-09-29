@@ -1,12 +1,13 @@
 import * as Phaser from "phaser";
+import "./audio";
 import { BootScene } from "./scenes/BootScene";
 import { TitleScene } from "./scenes/TitleScene";
 import { UIScene } from "./scenes/UIScene";
 import { WorldScene } from "./world/WorldScene";
-import { COLORS, FONT, HEIGHT, WIDTH, css } from "./theme";
+import { COLORS, FONT, HEIGHT, MONO, WIDTH, css } from "./theme";
 
 // Phaser draws text to canvas, so the pixel font must be loaded before the first frame.
-await document.fonts.load(`8px ${FONT}`);
+await Promise.all([document.fonts.load(`8px ${FONT}`), document.fonts.load(`9px ${MONO}`), document.fonts.load(`bold 9px ${MONO}`)]);
 
 const game = new Phaser.Game({
   type: Phaser.WEBGL,

@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import { COLORS, WIDTH, textStyle } from "../theme";
 import { CONFIRM, DOWN, UP, nextKey } from "./keys";
+import { sfx } from "../audio";
 
 const BOX = { x: 16, y: 256, w: WIDTH - 32, h: 92, pad: 14 };
 const CHAR_MS = 18;
@@ -42,12 +43,14 @@ export class Dialogue {
       this.more.setVisible(true);
       this.mode = "line";
       await nextKey(this.scene, CONFIRM);
+      sfx.select();
     }
     this.box.setVisible(false);
     this.mode = "closed";
   }
 
-  async choose(prompt: string, options: string[]): Promise<number> {
+  /** `initial` is the option the cursor starts on. */
+  async choose(prompt: string, options: string[], initial = 0): Promise<number> {
     this.box.setVisible(true);
     this.more.setVisible(false);
     await this.type(prompt);
@@ -61,7 +64,7 @@ export class Dialogue {
       this.onChoice?.(prompt, auto);
       return auto;
     }
-    let selected = 0;
+    let selected = initial;
     const render = () =>
       this.text.setText(
         [prompt, "", ...options.map((o, i) => `${i === selected ? ">" : " "} ${o}`)].join("\n"),
@@ -70,7 +73,11 @@ export class Dialogue {
     this.mode = "choice";
     for (;;) {
       const key = await nextKey(this.scene, [...CONFIRM, ...UP, ...DOWN]);
-      if (CONFIRM.includes(key)) break;
+      if (CONFIRM.includes(key)) {
+        sfx.select();
+        break;
+      }
+      sfx.move();
       selected = (selected + (UP.includes(key) ? -1 : 1) + options.length) % options.length;
       render();
     }
@@ -106,6 +113,7 @@ export class Dialogue {
         callback: () => {
           shown++;
           this.text.setText(line.slice(0, shown));
+          if (shown % 2 === 0 && line[shown - 1] !== " ") sfx.blip();
           if (shown >= line.length) finish();
         },
       });

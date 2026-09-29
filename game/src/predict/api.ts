@@ -2,6 +2,58 @@
 
 export type Row = Record<string, number | string>;
 
+/** What the server reports about its own TabPFN calls (see CallTrace in server/predict.ts). */
+export interface CallTrace {
+  task: "classification" | "regression";
+  modelPath: string;
+  predictParams: { output_type: string; quantiles?: number[] };
+  columns: string[];
+  trainSample: (string | number | boolean | null)[][];
+  trainSampleNote: string;
+  fit: "fitted" | "reused";
+  timings: Record<string, number>;
+}
+
+/** One /api/predict round trip, verbatim, for the phone's "API call" view. */
+export interface ApiCall {
+  id: number;
+  request: Record<string, unknown>;
+  startedAt: number;
+  status?: number;
+  response?: Record<string, unknown>;
+  ms?: number;
+}
+
+/** The phone shows the latest call for the world models. The player model (your sealed guesses) is not the phone's. */
+export const apiLog: { inflight: Record<string, ApiCall | undefined>; last: Record<string, ApiCall | undefined> } = { inflight: {}, last: {} };
+
+let callCount = 0;
+
+async function post(request: Record<string, unknown>, timeoutMs: number): Promise<{ ok: boolean; status: number; body: any }> {
+  const call: ApiCall = { id: ++callCount, request, startedAt: performance.now() };
+  const dataset = String(request.dataset);
+  const tracked = dataset !== "player";
+  if (tracked) apiLog.inflight[dataset] = call;
+  try {
+    const res = await fetch("/api/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    const body = await res.json();
+    if (tracked) {
+      call.status = res.status;
+      call.response = body;
+      call.ms = Math.round(performance.now() - call.startedAt);
+      apiLog.last[dataset] = call;
+    }
+    return { ok: res.ok, status: res.status, body };
+  } finally {
+    if (apiLog.inflight[dataset] === call) apiLog.inflight[dataset] = undefined;
+  }
+}
+
 export interface ClassPrediction {
   ok: true;
   /** One entry per requested row: class → probability. */
@@ -24,13 +76,8 @@ export async function predictClasses(
   extra: Record<string, unknown> = {},
 ): Promise<ClassPrediction | NoSignal> {
   try {
-    const res = await fetch("/api/predict", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dataset, rows, ...extra }),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    const body = await res.json();
+    const res = await post({ dataset, rows, ...extra }, timeoutMs);
+    const body = res.body;
     if (!res.ok) return { ok: false, reason: body.error ?? `HTTP ${res.status}` };
     const classes = body.classes as string[];
     const out = (body.prediction as number[][]).map((probas) => Object.fromEntries(classes.map((c, i) => [c, probas[i]])));
@@ -53,13 +100,8 @@ export async function predictQuantiles(
   timeoutMs = 45_000,
 ): Promise<QuantilePrediction | NoSignal> {
   try {
-    const res = await fetch("/api/predict", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dataset, rows }),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    const body = await res.json();
+    const res = await post({ dataset, rows }, timeoutMs);
+    const body = res.body;
     if (!res.ok) return { ok: false, reason: body.error ?? `HTTP ${res.status}` };
     const qs = body.quantiles as number[];
     const pred = body.prediction as number[][]; // [quantile][row]

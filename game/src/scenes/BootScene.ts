@@ -40,6 +40,24 @@ export class BootScene extends Phaser.Scene {
         });
       }
     }
+    // Exit marker: a yellow arrow pointing down (rotated in place for the other directions).
+    const g = this.make.graphics({}, false);
+    g.fillStyle(0x1b1b2a).fillTriangle(0, 0, 13, 0, 6.5, 9);
+    g.fillStyle(0xf2c14e).fillTriangle(2, 1.5, 11, 1.5, 6.5, 6.5);
+    g.generateTexture("arrow", 13, 9);
+    g.destroy();
+
+    // The Phone of Priors, lying on the nightstand, and its glow.
+    const p = this.make.graphics({}, false);
+    p.fillStyle(0x1b1b2a).fillRect(0, 0, 8, 12);
+    p.fillStyle(0x22222e).fillRect(1, 1, 6, 10);
+    p.fillStyle(0x7fdcff).fillRect(2, 2, 4, 7);
+    p.fillStyle(0xf4ecd8).fillRect(3, 3, 2, 1).fillRect(3, 5, 2, 1);
+    p.generateTexture("phone", 8, 12);
+    p.clear().fillStyle(0x7fdcff).fillCircle(12, 12, 12);
+    p.generateTexture("phone-glow", 24, 24);
+    p.destroy();
+
     this.startDay();
     const jump = new URLSearchParams(window.location.search).get("map");
     if (jump) {

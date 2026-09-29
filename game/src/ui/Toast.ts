@@ -1,5 +1,6 @@
 import * as Phaser from "phaser";
 import { COLORS, WIDTH, textStyle } from "../theme";
+import { sfx } from "../audio";
 
 /** A small, non-blocking notice at the top of the screen (the phone's sealed guesses). */
 export class Toast {
@@ -17,6 +18,7 @@ export class Toast {
   }
 
   show(message: string, ms = 3500): void {
+    sfx.ping();
     this.text.setText(message);
     const w = this.text.width + 20;
     this.bg.clear().fillStyle(COLORS.phoneBody, 0.95).fillRoundedRect(-w / 2, -5, w, this.text.height + 10, 6);

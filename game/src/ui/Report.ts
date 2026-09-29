@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import { COLORS, HEIGHT, WIDTH, textStyle } from "../theme";
 import { CONFIRM, nextKey } from "./keys";
+import { sfx } from "../audio";
 
 export interface ReportPage {
   title: string;
@@ -30,6 +31,7 @@ export class ReportView {
     this.root.setVisible(true).setAlpha(0);
     this.scene.tweens.add({ targets: this.root, alpha: 1, duration: 300 });
     for (const [i, page] of pages.entries()) {
+      sfx.page();
       this.render(page, `${i + 1}/${pages.length}   SPACE`);
       await nextKey(this.scene, CONFIRM);
     }

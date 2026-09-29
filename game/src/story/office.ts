@@ -11,8 +11,8 @@ function morningMessages(): void {
   if (state.leoHome) {
     state.messages.push(
       state.leoContagious
-        ? { from: "Sam", text: "Leo is at 38.4 now. Good call keeping him home." }
-        : { from: "Sam", text: "Leo is bouncing on the sofa. Pretty sure he's fine. My big meeting is gone though." },
+        ? { from: "Charles", text: "Leo is at 38.4 now. Good call keeping him home." }
+        : { from: "Charles", text: "Leo is bouncing on the sofa. Pretty sure he's fine. My big meeting is gone though." },
     );
   } else if (state.leoContagious) {
     state.messages.push({ from: "School", text: "Four children in class 1b went home with a cold today." });
@@ -28,7 +28,7 @@ export const officeStory: Story = {
     prefetchForecast();
     void sealGuesses(["gpu", "avocados"]).then((msg) => msg && ui.toast.show(msg));
     await ui.dialogue.say([
-      "Prior Labs, Freiburg. Your desk is the one by the window.",
+      "Posterior Labs, Freiburg. Your desk is the one by the window.",
       state.messages.length ? "Your phone buzzes. (TAB to read messages.)" : "Quiet phone. So far.",
     ]);
   },
@@ -37,7 +37,7 @@ export const officeStory: Story = {
       if (state.bootDone) return ui.dialogue.say("Claude has the eight runs set up. They're waiting for GPUs.");
       await ui.terminal.play([
         { text: "Omarchy (Arch Linux) - tty1", color: "dim" },
-        { text: "ada@priorlabs ~ $ cd tabpfn && claude", typed: true, color: "green" },
+        { text: "ada@posteriorlabs ~ $ cd tabpfn && claude", typed: true, color: "green" },
         { text: "* Claude Code", color: "orange" },
         { text: "> Read the eight proposals in proposals/ and set up their runs.", typed: true },
         { text: "Reading proposals/*.md ...", color: "dim" },

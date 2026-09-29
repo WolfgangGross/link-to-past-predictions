@@ -2,20 +2,24 @@
 
 import type { Story } from "../world/WorldScene";
 import { predictClasses, type ClassPrediction, type NoSignal } from "../predict/api";
+import { rolls } from "../data/rolls";
 import { logJudgment, pct, state, type JudgmentCard } from "../state";
 import type { UIScene } from "../scenes/UIScene";
 import { sealGuesses } from "../predict/player";
 
-const MIA = { age: 8, days_since_sprain: 3, swelling: 1, pain_reported: 1, previous_sprains: 0 };
+const MIA = rolls.mia;
+const AGE_WORD = ["", "", "", "", "", "", "", "seven", "eight", "nine", "ten"];
+const SWELLING = ["No swelling", "A little swelling", "Quite some swelling", "A lot of swelling"];
+const PAIN = (p: number) => (p === 0 ? "She says it doesn't hurt" : p <= 2 ? "She says it hurts a tiny bit" : "She admits it hurts");
 const WIN_CHANCE = { full: 0.6, half: 0.45, sit: 0.25 };
-const LINES = { Mia: 0.5, "Coach Jansen": 0.4, Sam: 0.1 };
+const LINES = { Mia: 0.5, "Coach Jansen": 0.4, Charles: 0.1 };
 
 export const CARD: JudgmentCard = {
   title: "Mia's final",
   falseNegative: "She plays and the ankle goes again: six weeks out.",
   falsePositive: "She sits, the ankle was fine, and her team loses without her.",
   whoBears: "Mia, mostly. Her team, a bit. You, at bedtime.",
-  whoDecides: "Mia, the coach, Sam, you. The phone can't say whose preferences count.",
+  whoDecides: "Mia, the coach, Charles, you. The phone can't say whose preferences count.",
   oldRule: '"No match within a week of a sprain": protective, and blind to how bad it is.',
 };
 
@@ -25,20 +29,20 @@ function prefetchRisk(): void {
   risk ??= predictClasses("reinjury", [
     { ...MIA, minutes_planned: 45 },
     { ...MIA, minutes_planned: 20 },
-    { ...MIA, days_since_sprain: 6, swelling: 0, minutes_planned: 45 },
+    { ...MIA, days_since_sprain: MIA.days_since_sprain + 7, swelling: 0, minutes_planned: 45 },
   ]);
 }
 
 async function decideFinal(ui: UIScene): Promise<void> {
   await ui.dialogue.say([
-    'Karim (physio): "Day three after the sprain. A little swelling. She says it doesn\'t hurt."',
+    `Karim (physio): "Day ${MIA.days_since_sprain} after the sprain. ${SWELLING[MIA.swelling]}. ${PAIN(MIA.pain_reported)}${MIA.previous_sprains ? `. That's sprain number ${MIA.previous_sprains + 1} for her` : ""}."`,
     'Karim: "Kids always say that before a final. The club rule: NO MATCH WITHIN A WEEK OF A SPRAIN."',
   ]);
-  const pick = await ui.dialogue.choose("Mia?", ["Follow the rule: she sits out", "Ask the phone"]);
+  const pick = await ui.dialogue.choose("Mia?", ["Follow the rule: she sits out", "Ask the phone"], 1);
   if (pick === 0) return play(ui, "sit", "rule");
 
   await ui.phone.open();
-  ui.phone.thinking("MIA'S ANKLE");
+  ui.phone.thinking("MIA'S ANKLE", "reinjury");
   prefetchRisk();
   const result = await risk!;
   if (!result.ok) {
@@ -59,9 +63,9 @@ async function decideFinal(ui: UIScene): Promise<void> {
     `The phone: ${pct(full)} for the full game. ${pct(half)} if she only plays the second half.`,
     'Mia: "I\'d play even at fifty percent!"',
     'Coach Jansen: "Under forty, she plays. We need her up front."',
-    'Sam (video call): "Anything over ten percent is too much. She\'s eight."',
+    `Charles (video call): "Anything over ten percent is too much. She's ${AGE_WORD[MIA.age]}."`,
   ]);
-  const yours = await ui.phone.dial("YOUR LINE", "Mia plays if her reinjury risk is below...", 20);
+  const yours = await ui.phone.dial("YOUR LINE", "Mia plays if her reinjury risk is below...", 20, 5, "<");
   await ui.dialogue.say("One prediction. Four lines. The phone can't tell you whose preferences count.");
   const lines = { ...LINES, You: yours };
   const agree = (p: number) => Object.entries(lines).filter(([, line]) => p < line).map(([who]) => who);
@@ -83,7 +87,7 @@ async function play(ui: UIScene, kind: "full" | "half" | "sit", choice: "rule" |
   const chance = p ?? (result?.ok ? result.rows[kind === "half" ? 1 : 0].reinjured : 0.3);
   const reinjured = kind !== "sit" && Math.random() < chance;
   const won = !reinjured && Math.random() < WIN_CHANCE[kind];
-  const whose = kind === "sit" ? (choice === "rule" ? "the club rule" : "Sam's line") : kind === "full" ? "Mia's and the coach's line" : "a compromise";
+  const whose = kind === "sit" ? (choice === "rule" ? "the club rule" : "Charles's line") : kind === "full" ? "Mia's and the coach's line" : "a compromise";
   state.final = { minutes: kind === "full" ? 45 : kind === "half" ? 20 : 0, risk: p, reinjured, whose };
   logJudgment({ scene: "final", clock: "16:28", choice, threshold: yours, predicted: p, action: { full: "full game", half: "second half", sit: "sat out" }[kind], costOn: "family", outcome: reinjured ? "reinjured" : won ? "team won" : "team lost" }, CARD);
 

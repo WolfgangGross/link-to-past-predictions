@@ -2,6 +2,7 @@
 // Flow: prepare_train_set_upload → PUT signed URLs → fit → prepare_test_set_upload → PUT → predict.
 
 const DEFAULT_BASE_URL = "https://api.priorlabs.ai";
+export const DEFAULT_MODEL_PATH = "v3.5_default";
 
 export type Task = "classification" | "regression";
 export type Cell = string | number | boolean | null;
@@ -119,7 +120,7 @@ export class TabPFNClient {
     }
     timings.upload_train = performance.now() - t;
 
-    const tabpfnConfig: Record<string, unknown> = { model_path: opts.modelPath ?? "v3.5_default" };
+    const tabpfnConfig: Record<string, unknown> = { model_path: opts.modelPath ?? DEFAULT_MODEL_PATH };
     if (opts.fitMode) tabpfnConfig.fit_mode = opts.fitMode;
     if (opts.nEstimators) tabpfnConfig.n_estimators = opts.nEstimators;
 

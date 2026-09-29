@@ -1,7 +1,7 @@
 // Server-side prediction service shared by the Vercel function and the Vite dev server.
 // World datasets live on the server; clients only send the rows they want predicted.
 
-import { TabPFNClient, TabPFNError, type Cell, type PredictParams, type Row, type Task } from "./tabpfn.js";
+import { DEFAULT_MODEL_PATH, TabPFNClient, TabPFNError, type Cell, type PredictParams, type Row, type Task, type Timings } from "./tabpfn.js";
 import * as weather from "./datasets/weather.js";
 import * as symptoms from "./datasets/symptoms.js";
 import * as traffic from "./datasets/traffic.js";
@@ -100,6 +100,21 @@ export interface PredictRequest {
   history?: { row: Row; choice: string }[];
 }
 
+/** What the server actually sent to TabPFN, so the game can show the real call on the phone. */
+export interface CallTrace {
+  task: Task;
+  modelPath: string;
+  predictParams: PredictParams;
+  columns: string[];
+  /** A few training rows in column order, target last. */
+  trainSample: Cell[][];
+  trainSampleNote: string;
+  /** "fitted": this request ran /fit. "reused": the fit was already on the server (or deduplicated by the API). */
+  fit: "fitted" | "reused";
+  /** Milliseconds per API step of the original (uncached) call. */
+  timings: Timings;
+}
+
 export interface PredictResponse {
   dataset: string;
   prediction: unknown;
@@ -109,6 +124,7 @@ export interface PredictResponse {
   trainRows: number;
   cached: boolean;
   ms: number;
+  trace: CallTrace;
 }
 
 export class RequestError extends Error {
@@ -166,6 +182,7 @@ function cleanRow(ds: WorldDataset, row: unknown, i: number): Row {
 
 // Per-instance caches. Fits are free but slow; identical world requests reuse the real response (no tokens).
 const fits = new Map<string, Promise<string>>();
+const fitTimings = new Map<string, Timings>();
 const responses = new Map<string, PredictResponse>();
 const MAX_CACHED_RESPONSES = 500;
 
@@ -180,7 +197,9 @@ function fitDataset(name: string, refit = false): Promise<string> {
   if (!fit) {
     const ds = WORLD[name];
     const X = ds.X.map((values) => Object.fromEntries(ds.columns.map((c, i) => [c, values[i]])));
-    fit = getClient().fit(X, ds.y, ds.task);
+    const timings: Timings = {};
+    fitTimings.set(name, timings);
+    fit = getClient().fit(X, ds.y, ds.task, {}, timings);
     fits.set(name, fit);
     fit.catch(() => fits.delete(name));
   }
@@ -195,15 +214,17 @@ export async function predict(req: PredictRequest): Promise<PredictResponse> {
   const ds = WORLD[req.dataset];
   const start = performance.now();
   if (req.history) return predictPlayer(req, ds, key, start);
+  const fitWasCached = fits.has(req.dataset);
+  const timings: Timings = {};
   let fitId = await fitDataset(req.dataset);
   let result;
   try {
-    result = await getClient().predict(fitId, req.rows, ds.task, ds.predict);
+    result = await getClient().predict(fitId, req.rows, ds.task, ds.predict, timings);
   } catch (err) {
     // The fitted model can expire server-side; refit once.
     if (!(err instanceof TabPFNError) || err.status !== 404) throw err;
     fitId = await fitDataset(req.dataset, true);
-    result = await getClient().predict(fitId, req.rows, ds.task, ds.predict);
+    result = await getClient().predict(fitId, req.rows, ds.task, ds.predict, timings);
   }
 
   const response: PredictResponse = {
@@ -214,6 +235,16 @@ export async function predict(req: PredictRequest): Promise<PredictResponse> {
     trainRows: ds.X.length,
     cached: false,
     ms: Math.round(performance.now() - start),
+    trace: {
+      task: ds.task,
+      modelPath: DEFAULT_MODEL_PATH,
+      predictParams: ds.predict,
+      columns: [...ds.columns, "target"],
+      trainSample: ds.X.slice(0, 2).map((row, i) => [...row, ds.y[i]]),
+      trainSampleNote: "first 2 rows",
+      fit: fitWasCached ? "reused" : "fitted",
+      timings: { ...(fitWasCached ? {} : fitTimings.get(req.dataset)), ...timings },
+    },
   };
   if (responses.size >= MAX_CACHED_RESPONSES) responses.delete(responses.keys().next().value!);
   responses.set(key, response);
@@ -225,8 +256,9 @@ async function predictPlayer(req: PredictRequest, ds: WorldDataset, key: string,
   const history = req.history ?? [];
   const X = [...PERSONA.map((p) => p.row), ...history.map((h) => h.row)];
   const y = [...PERSONA.map((p) => p.choice), ...history.map((h) => h.choice)];
-  const fitId = await getClient().fit(X, y, ds.task);
-  const result = await getClient().predict(fitId, req.rows, ds.task, ds.predict);
+  const timings: Timings = {};
+  const fitId = await getClient().fit(X, y, ds.task, {}, timings);
+  const result = await getClient().predict(fitId, req.rows, ds.task, ds.predict, timings);
   const response: PredictResponse = {
     dataset: req.dataset,
     prediction: result.prediction,
@@ -234,6 +266,16 @@ async function predictPlayer(req: PredictRequest, ds: WorldDataset, key: string,
     trainRows: X.length,
     cached: false,
     ms: Math.round(performance.now() - start),
+    trace: {
+      task: ds.task,
+      modelPath: DEFAULT_MODEL_PATH,
+      predictParams: ds.predict,
+      columns: [...ds.columns, "target"],
+      trainSample: X.slice(-2).map((row, i) => [...ds.columns.map((c) => row[c] ?? null), y.slice(-2)[i]]),
+      trainSampleNote: "your 2 latest judgments",
+      fit: "fitted",
+      timings,
+    },
   };
   if (responses.size >= MAX_CACHED_RESPONSES) responses.delete(responses.keys().next().value!);
   responses.set(key, response);

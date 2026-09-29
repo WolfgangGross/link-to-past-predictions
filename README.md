@@ -22,8 +22,8 @@ Every scene follows the same loop: **old rule → prediction → your threshold 
 | The office | radiology | Omarchy + Claude write the training code in five minutes. The judgment is still yours. |
 | GPU allocation | Flint's lead pipes | TabPFN as a **surrogate model** ranks 8 research proposals from 400 past experiments, titles included. Efficient, or one node per team? |
 | Avocados | the AI bullwhip | A demand **forecast** for the canteen. Smarter local orders make the whole supply chain swing. |
-| Mia's final | Michael Jordan playing injured | Small-data reinjury risk for the full game vs. the second half. Mia, the coach, Sam and you each have a line. |
-| Bedtime | who has authority to choose? | The report: your day, **your hidden judgment**, and how predictable you were. Then: *"Shall I decide tomorrow for you?"* |
+| Mia's final | Michael Jordan playing injured | Small-data reinjury risk for the full game vs. the second half. Mia, the coach, Charles and you each have a line. |
+| Bedtime | who has authority to choose? | The report: your day, **your hidden judgment**. Then: *"Shall I decide tomorrow for you?"* |
 
 **The phone learns you.** Before each decision, TabPFN makes a **sealed guess** (rule or phone?) in context from your earlier judgments, including earlier days. It shows the SHA-256 commitment first and reveals the guess after you choose. Nothing is trained; your past is the context. On replay the phone remembers yesterday. If you let it, it re-applies yesterday's lines to a new day.
 

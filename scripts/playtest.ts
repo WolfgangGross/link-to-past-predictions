@@ -95,7 +95,8 @@ async function talk(): Promise<UiState> {
 async function choose(index: number) {
   const s = await until((s) => s.dialog === "choice", "choice");
   console.log("  ?", s.text.replace(/\n/g, " | "), "->", index);
-  for (let i = 0; i < index; i++) await press("ArrowDown");
+  const cursor = s.text.split("\n").slice(2).findIndex((l: string) => l.startsWith(">")); // where the cursor starts
+  for (let i = cursor; i !== index; i += index > cursor ? 1 : -1) await press(index > cursor ? "ArrowDown" : "ArrowUp");
   await press("Space");
 }
 
@@ -173,7 +174,7 @@ await page.waitForTimeout(7000); // the phone seals its guesses about you (~5 s 
 await shot("sealed-guess");
 
 console.log("umbrella");
-await teleport(4, 3, "up");
+await teleport(8, 3, "up");
 await talk();
 await choose(useRules ? 0 : 1);
 if (!useRules) {
@@ -186,7 +187,7 @@ if (!useRules) {
 await read();
 
 console.log("leo");
-await teleport(20.6, 3.45, "up");
+await teleport(15.6, 3.45, "up");
 await talk();
 await choose(useRules ? 0 : 1);
 if (!useRules) {
@@ -210,7 +211,7 @@ await read();
 
 await page.waitForTimeout(6500); // sealing the school-run guess
 console.log("school run");
-await teleport(11.5, 13, "down");
+await teleport(9, 9, "down");
 await page.keyboard.down("ArrowDown");
 await page.waitForTimeout(400);
 await page.keyboard.up("ArrowDown");
@@ -232,19 +233,19 @@ await page.waitForTimeout(600);
 await shot("street-arrival");
 const arrival = await read();
 if (arrival.card) await closeCard("school-run-card");
-await teleport(8, 7.1, "up");
+await teleport(3, 7.1, "up");
 await talk();
 await shot("cafe");
-await teleport(22, 7.1, "up");
+await teleport(11, 7.1, "up");
 await talk();
-await teleport(36.5, 11.5, "right");
+await teleport(18.5, 10.5, "right");
 await walk("ArrowRight", 500);
 await readUntilMap("office");
 
 console.log("office");
 await page.waitForTimeout(7000);
 await read();
-await teleport(2, 5, "up");
+await teleport(2, 4, "up");
 await press("Space");
 await until((s) => s.terminal, "terminal", 30_000);
 await shot("omarchy-claude");
@@ -253,7 +254,7 @@ await until((s) => s.dialog === "line", "after terminal");
 await read();
 
 console.log("gpu");
-await teleport(23, 5, "left");
+await teleport(18, 4, "left");
 await talk();
 await choose(useRules ? 0 : 1);
 if (!useRules) {
@@ -267,7 +268,7 @@ if (!useRules) {
 await read();
 
 console.log("avocados");
-await teleport(18.5, 12.1, "up");
+await teleport(13.5, 9.1, "up");
 await talk();
 await choose(useRules ? 0 : 1);
 if (!useRules) {
@@ -287,14 +288,14 @@ if (!useRules) {
 await read();
 
 console.log("to the field");
-await teleport(12.5, 15, "down");
+await teleport(9, 10, "down");
 await walk("ArrowDown", 400);
 await readUntilMap("field");
 
 console.log("field");
 await page.waitForTimeout(7000);
 await read();
-await teleport(14.5, 10.5, "left");
+await teleport(8.5, 6.4, "left");
 await talk();
 await choose(useRules ? 0 : 1);
 if (!useRules) {
@@ -308,7 +309,7 @@ if (!useRules) {
   await closeCard("final-card");
 }
 await read();
-await teleport(2.5, 13.5, "left");
+await teleport(2.5, 8.5, "left");
 await walk("ArrowLeft", 500);
 await readUntilMap("evening");
 
@@ -340,7 +341,7 @@ if (autopilot) {
   await talk();
   await teleport(3, 3.5, "up");
   await talk();
-  await teleport(4, 3, "up");
+  await teleport(8, 3, "up");
   await talk();
   const s = await readUntil((s) => s.dialog === "line" && s.text.includes("The phone chose"), "autopilot choice");
   await shot("day2-autopilot");

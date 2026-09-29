@@ -20,10 +20,14 @@ export interface Spot {
   at: Cell;
   size?: Cell;
   trigger?: "interact" | "touch";
+  /** Exit marker: a bobbing arrow (pointing this way) with a caption, drawn over a touch spot. */
+  exit?: { label: string; arrow: "down" | "left" | "right" };
 }
 
 export interface NpcDef {
   id: string;
+  /** Shown as a name tag above the head. */
+  name: string;
   who: Character;
   at: Cell;
   facing: Facing;
@@ -42,6 +46,10 @@ export interface MapDef {
   spots: Spot[];
   npcs: NpcDef[];
   spawn: { at: Cell; facing: Facing };
+  /** Windows that show the sky (sun, clouds, rain, thunder or night) instead of a static tile. */
+  /** Where the Phone of Priors glows until Ada picks it up. */
+  phone?: Cell;
+  windows?: { at: Cell; size: Cell }[];
   /** White pitch markings in tile units: lines [x1, y1, x2, y2], circles [x, y, r], rects [x, y, w, h]. */
   markings?: { lines?: number[][]; circles?: number[][]; rects?: number[][] };
 }

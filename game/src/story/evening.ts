@@ -6,7 +6,6 @@ import { loadMemory, saveMemory } from "../memory";
 import { PROPOSALS } from "./gpu";
 import type { ReportPage } from "../ui/Report";
 import type { UIScene } from "../scenes/UIScene";
-import { guesses, trainingRowCount } from "../predict/player";
 
 const fmt = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}`;
 
@@ -49,7 +48,7 @@ function hiddenJudgment(): [string, string][] {
   const leo = by("sick_kid");
   if (umbrella?.threshold !== undefined) rows.push(["", `You'll risk soaked kids whenever rain is below ${pct(umbrella.threshold)}.`]);
   if (leo?.threshold !== undefined) {
-    rows.push(["", `You keep Leo home from ${pct(leo.threshold)}. Sam from 10%. The nurse only at 38.0 °C.`]);
+    rows.push(["", `You keep Leo home from ${pct(leo.threshold)}. Charles from 10%. The nurse only at 38.0 °C.`]);
     if (umbrella?.threshold !== undefined && leo.threshold < umbrella.threshold)
       rows.push(["", "You're more careful when the cost lands on other families than on your own."]);
   }
@@ -60,22 +59,10 @@ function hiddenJudgment(): [string, string][] {
   const avo = by("avocados");
   if (avo?.threshold !== undefined) rows.push(["", `No avocados is fine once in ${Math.round(1 / (1 - avo.threshold))} days.`]);
   const fin = by("final");
-  if (fin?.threshold !== undefined) rows.push(["", `Mia plays below ${pct(fin.threshold)} risk. Mia's line: 50%. The coach: 40%. Sam: 10%.`]);
+  if (fin?.threshold !== undefined) rows.push(["", `Mia plays below ${pct(fin.threshold)} risk. Mia's line: 50%. The coach: 40%. Charles: 10%.`]);
   const asked = state.judgments.filter((j) => j.choice === "prediction").length;
   rows.push(["", `You asked the phone ${asked} times out of ${state.judgments.length}.`]);
   if (!rows.length) rows.push(["", "You followed every rule. Your judgment stayed hidden, even from you."]);
-  return rows;
-}
-
-function predictability(): [string, string][] {
-  const made = Object.values(guesses).filter((g) => g && g.hit !== undefined);
-  if (!made.length) return [["", "No sealed guesses today: the phone had no signal about you."]];
-  const hits = made.filter((g) => g!.hit).length;
-  const rows: [string, string][] = made.map((g) => [
-    state.cards[state.judgments.findIndex((j) => j.scene === g!.scene)]?.title ?? g!.scene,
-    `#${g!.seal}: ${g!.guess === "prediction" ? "you'd ask the phone" : "you'd follow the rule"} (${Math.round(g!.p * 100)}%) - ${g!.hit ? "right" : "wrong"}`,
-  ]);
-  rows.push(["", `I guessed ${hits} of ${made.length}. I learned from ${trainingRowCount()} of your past decisions, plus 36 from people like you. No training: your past was my context.`]);
   return rows;
 }
 
@@ -86,12 +73,11 @@ async function bedtime(ui: UIScene): Promise<void> {
   const pages: ReportPage[] = [
     { title: "YOUR DAY", rows: judgmentRows() },
     { title: "YOUR HIDDEN JUDGMENT", rows: [...hiddenJudgment(), ["", "Every probability needed a line. Every line was yours."]] },
-    { title: "HOW PREDICTABLE WERE YOU?", rows: predictability() },
   ];
   await ui.report.show(pages);
   await ui.dialogue.say([
     '"I know your lines now. Tomorrow I could make these calls for you. Same thresholds, new day."',
-    'Sam (half asleep): "Your thresholds, or ours?"',
+    'Charles (half asleep): "Your thresholds, or ours?"',
   ]);
   const pick = await ui.dialogue.choose("Tomorrow?", ["Let the phone decide for me", "I'll decide myself", "Wipe the phone's memory"]);
   const memory = loadMemory();
@@ -116,10 +102,11 @@ export const eveningStory: Story = {
     await ui.dialogue.say("Home. It smells like pizza.");
     await runResults(ui);
   },
+  sky: () => "night",
   interact: {
-    async sam({ ui }) {
+    async charles({ ui }) {
       const cost = state.leoHome ? "I lost my meeting today. Leo was worth it. Probably." : "Quiet day. I even got work done.";
-      await ui.dialogue.say(`Sam: "${cost} How was the phone?"`);
+      await ui.dialogue.say(`Charles: "${cost} How was the phone?"`);
     },
     async mia({ ui }) {
       const f = state.final;

@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import { COLORS, HEIGHT, WIDTH, textStyle } from "../theme";
 import { CONFIRM, nextKey } from "./keys";
+import { sfx } from "../audio";
 import type { JudgmentCard } from "../state";
 
 const W = 520;
@@ -43,6 +44,7 @@ export class CardView {
     });
     add(H - 34, "The phone predicted. You chose the line.          SPACE", COLORS.muted);
     this.isOpen = true;
+    sfx.card();
     this.root.setVisible(true).setAlpha(0);
     this.scene.tweens.add({ targets: this.root, alpha: 1, duration: 150 });
     await nextKey(this.scene, CONFIRM);

@@ -1,12 +1,14 @@
 // Scene 1 — the umbrella: rule → prediction → threshold → action → ripple.
 
 import { predictClasses, type ClassPrediction, type NoSignal } from "../predict/api";
-import { weatherFor } from "../data/scenarios";
-import { logJudgment, pct, state, today, type JudgmentCard } from "../state";
+import { rolls } from "../data/rolls";
+import { logJudgment, pct, state, type JudgmentCard } from "../state";
 import type { UIScene } from "../scenes/UIScene";
+import type { Sky } from "../world/weather";
 import { prefetchLeo } from "./leo";
 import { prefetchTraffic } from "./schoolRun";
 import { sealGuesses } from "../predict/player";
+import { sfx } from "../audio";
 
 const BASE_RATE = 0.195; // share of rainy school runs in the training data
 
@@ -17,6 +19,27 @@ const CARD: JudgmentCard = {
   whoBears: "Mostly Mia and Leo. A little bit your wallet.",
   whoDecides: "You. The phone only did the maths.",
   oldRule: '"Always pack umbrellas": cheap, reliable, no forecast needed.',
+};
+
+let forecast: number | undefined; // the phone's rain chance, once asked
+
+/**
+ * What the flat's windows show. Before the phone has spoken it is the sky as it is at 06:30 (the held-out
+ * morning's own measurements); afterwards it is the phone's forecast: sun, clouds, rain or thunder.
+ */
+export function currentSky(): Sky {
+  if (forecast !== undefined) return forecast >= 0.65 ? "thunder" : forecast >= 0.4 ? "rain" : forecast >= 0.2 ? "clouds" : "sun";
+  const f = rolls.morning.features;
+  if (f.rain_last_3h_mm > 0.2) return f.rain_last_3h_mm >= 4 && f.wind_kmh >= 10 ? "thunder" : "rain";
+  return f.cloud_cover_pct >= 60 ? "clouds" : "sun";
+}
+
+const SKY_LINE: Record<Sky, string> = {
+  sun: "Sun over Freiburg.",
+  clouds: "Grey sky over Freiburg.",
+  rain: "Rain on the glass over Freiburg.",
+  thunder: "Thunder rolls over Freiburg.",
+  night: "Dark outside.",
 };
 
 let rain: Promise<ClassPrediction | NoSignal> | undefined;
@@ -36,10 +59,11 @@ export function willItRain(): Promise<boolean> {
 
 /** Start the TabPFN call as soon as the phone is in hand, so it is ready at the window. */
 export function prefetchRain(): void {
-  rain ??= predictClasses("weather", [weatherFor(today()).features]);
+  rain ??= predictClasses("weather", [rolls.morning.features]);
 }
 
 export async function pickUpPhone(ui: UIScene): Promise<void> {
+  if (state.day === 0) sfx.item();
   await ui.dialogue.say(
     state.day > 0
       ? ["The phone is where you left it.", '"Good morning, Ada. I remember yesterday."', "(Press TAB to look at it.)"]
@@ -62,15 +86,15 @@ export async function lookOutOfWindow(ui: UIScene): Promise<void> {
     return;
   }
   if (!state.hasPhone) {
-    await ui.dialogue.say("Grey sky over Freiburg. Will it rain on the school run?");
+    await ui.dialogue.say(`${SKY_LINE[currentSky()]} Will it rain on the school run?`);
     return;
   }
 
   await ui.dialogue.say([
-    "Grey sky over Freiburg. The school run leaves at 8:00.",
+    `${SKY_LINE[currentSky()]} The school run leaves at 8:00.`,
     "House rule: ALWAYS PACK UMBRELLAS. Cheap. Reliable. Leo loses one a month.",
   ]);
-  const pick = await ui.dialogue.choose("Umbrellas?", ["Follow the rule: pack them", "Ask the phone"]);
+  const pick = await ui.dialogue.choose("Umbrellas?", ["Follow the rule: pack them", "Ask the phone"], 1);
   if (pick === 0) {
     decide(true, "rule");
     await ui.dialogue.say("Umbrellas packed. The rule never needs a forecast.");
@@ -79,7 +103,7 @@ export async function lookOutOfWindow(ui: UIScene): Promise<void> {
 
   await ui.phone.open();
   const threshold = await ui.phone.dial("YOUR JUDGMENT", "Pack umbrellas if the chance of rain is at least...");
-  ui.phone.thinking("RAIN ON THE SCHOOL RUN");
+  ui.phone.thinking("RAIN ON THE SCHOOL RUN", "weather");
   prefetchRain();
   const result = await rain!;
 
@@ -92,6 +116,7 @@ export async function lookOutOfWindow(ui: UIScene): Promise<void> {
   }
 
   const p = result.rows[0].rain;
+  forecast = p;
   const take = p >= threshold;
   state.phoneNotes.push(`Rain at 8:00: ${pct(p)}`);
   ui.phone.showProbability("RAIN ON THE SCHOOL RUN", p, threshold, [
