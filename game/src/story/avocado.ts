@@ -91,8 +91,8 @@ export async function avocados(ui: UIScene): Promise<void> {
     ["If 20 canteens all do this. With the rule, every swing is 0."],
   );
   await ui.dialogue.say([
-    "Twenty canteens in Freiburg got the same phone. Each one orders smarter, and together they order in waves.",
-    "Hakan sees the waves and orders extra \"just in case\". The farm sees bigger waves still.",
+    { text: "Twenty canteens in Freiburg got the same phone. Each one orders smarter, and together they order in waves.", mood: "surprised" },
+    { text: "Hakan sees the waves and orders extra \"just in case\". The farm sees bigger waves still.", mood: "guilty" },
   ]);
   await ui.phone.close();
   await decide(orders, "prediction", level);

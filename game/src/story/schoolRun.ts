@@ -88,7 +88,7 @@ export async function schoolRun(ui: UIScene): Promise<void> {
     [`Red line: school starts.`, `${result.trainRows.toLocaleString("en")} past runs.`],
   );
   if (!best) {
-    await ui.dialogue.say("Not even leaving now is safe enough for your line. The phone agrees with the rule.");
+    await ui.dialogue.say("Not even leaving now is safe enough for your line. The phone agrees with the rule.", "suspicious");
     await ui.phone.close();
     return depart(45, ROUTES[0], "prediction", level);
   }
@@ -101,7 +101,7 @@ export async function schoolRun(ui: UIScene): Promise<void> {
   const go = await ui.dialogue.choose("Well?", [`Leave at ${clock(best.depart)}`, "Leave now anyway"]);
   await ui.phone.close();
   if (go === 1) return depart(45, ROUTES[0], "rule", level);
-  if (gained > 0) await ui.dialogue.say(`${gained} extra minutes: pancakes with Mia. Charles steals one.`);
+  if (gained > 0) await ui.dialogue.say(`${gained} extra minutes: pancakes with Mia. Charles steals one.`, "success");
   return depart(best.depart, best.route, "prediction", level);
 }
 

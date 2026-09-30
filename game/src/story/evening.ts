@@ -22,7 +22,7 @@ async function runResults(ui: UIScene): Promise<void> {
       : gpu.asked
         ? `Predicted beforehand: ${fmt(gpu.expectedFunded!)} for your pick, ${fmt(gpu.expectedRule)} for one-per-team.`
         : `You never asked, but the phone had ranked them anyway: ${fmt(gpu.expectedRule)} for one-per-team, ${fmt(gpu.expectedTop)} for its top four.`;
-  await ui.dialogue.say([`Petra: "The runs are in: ${fmt(total)} points in total."`, expected]);
+  await ui.dialogue.say([`Petra: "The runs are in: ${fmt(total)} points in total."`, expected], total > 0 ? "success" : "neutral");
   await ui.phone.close();
 }
 
@@ -69,17 +69,17 @@ function hiddenJudgment(): [string, string][] {
 async function bedtime(ui: UIScene): Promise<void> {
   const leo = state.judgments.find((j) => j.scene === "sick_kid");
   if (leo && state.leoContagious !== undefined) leo.outcome = state.leoContagious ? "was contagious" : "wasn't contagious";
-  await ui.dialogue.say(["22:00. The phone glows on the nightstand.", '"Before you sleep: here is what I learned today."']);
+  await ui.dialogue.say(["22:00. The phone glows on the nightstand.", '"Before you sleep: here is what I learned today."'], "endOfDay");
   const pages: ReportPage[] = [
     { title: "YOUR DAY", rows: judgmentRows() },
     { title: "YOUR HIDDEN JUDGMENT", rows: [...hiddenJudgment(), ["", "Every probability needed a line. Every line was yours."]] },
   ];
   await ui.report.show(pages);
   await ui.dialogue.say([
-    '"I know your lines now. Tomorrow I could make these calls for you. Same thresholds, new day."',
-    'Charles (half asleep): "Your thresholds, or ours?"',
+    { text: '"I know your lines now. Tomorrow I could make these calls for you. Same thresholds, new day."', mood: "endOfDay" },
+    { text: 'Charles (half asleep): "Your thresholds, or ours?"', mood: "suspicious" },
   ]);
-  const pick = await ui.dialogue.choose("Tomorrow?", ["Let the phone decide for me", "I'll decide myself", "Wipe the phone's memory"]);
+  const pick = await ui.dialogue.choose("Tomorrow?", ["Let the phone decide for me", "I'll decide myself", "Wipe the phone's memory"], 0, undefined, "endOfDay");
   const memory = loadMemory();
   memory.past.push(...state.judgments.map((j) => ({ ...j, day: state.day })));
   memory.choices = { ...state.choiceLog };
@@ -92,7 +92,7 @@ async function bedtime(ui: UIScene): Promise<void> {
     memory.autopilot = false;
   }
   saveMemory(memory);
-  await ui.dialogue.say(pick === 2 ? '"Forgotten. Tomorrow I know nothing about you."' : '"Good night, Ada."');
+  await ui.dialogue.say(pick === 2 ? '"Forgotten. Tomorrow I know nothing about you."' : '"Good night, Ada."', "endOfDay");
   window.location.reload();
 }
 
@@ -114,11 +114,11 @@ export const eveningStory: Story = {
         !f ? 'Mia: "Pizza!"' : f.reinjured ? 'Mia: "My ankle is blue. But I played."' : f.minutes === 0 ? 'Mia: "I watched. From the BENCH."' : 'Mia: "Did you see me?!"',
       );
     },
-    leo: ({ ui }) => ui.dialogue.say(state.leoHome ? 'Leo: "I watched four cartoons. I feel great."' : 'Leo: "I got nine out of ten in spelling!"'),
+    leo: ({ ui }) => ui.dialogue.say(state.leoHome ? 'Leo: "I watched four cartoons. I feel great."' : 'Leo: "I got nine out of ten in spelling!"', "amused"),
     bed: ({ ui }) => bedtime(ui),
     window: ({ ui }) => ui.dialogue.say("Dark outside. Tomorrow's weather is tomorrow's problem."),
-    wardrobe: ({ ui }) => ui.dialogue.say("Pyjamas. Finally."),
+    wardrobe: ({ ui }) => ui.dialogue.say("Pyjamas. Finally.", "endOfDay"),
     desk: ({ ui }) => ui.dialogue.say("The home laptop. Not tonight."),
-    fridge: ({ ui }) => ui.dialogue.say("Leftover pizza. A prediction you can trust."),
+    fridge: ({ ui }) => ui.dialogue.say("Leftover pizza. A prediction you can trust.", "amused"),
   },
 };

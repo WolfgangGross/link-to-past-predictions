@@ -34,7 +34,7 @@ export const officeStory: Story = {
   },
   interact: {
     async adaDesk({ ui }) {
-      if (state.bootDone) return ui.dialogue.say("Claude has the eight runs set up. They're waiting for GPUs.");
+      if (state.bootDone) return ui.dialogue.say("Claude has the eight runs set up. They're waiting for GPUs.", "focused");
       await ui.terminal.play([
         { text: "Omarchy (Arch Linux) - tty1", color: "dim" },
         { text: "ada@posteriorlabs ~ $ cd tabpfn && claude", typed: true, color: "green" },
@@ -56,9 +56,9 @@ export const officeStory: Story = {
       ]);
       state.bootDone = true;
       await ui.dialogue.say([
-        "Claude wrote in five minutes what used to take you a week.",
-        'Jonas (over the monitor): "Great, so now we can run three times as many experiments!"',
-        "Three times as many results to review, explain and defend. The code got cheap. The judgment didn't.",
+        { text: "Claude wrote in five minutes what used to take you a week.", mood: "focused" },
+        { text: 'Jonas (over the monitor): "Great, so now we can run three times as many experiments!"', mood: "amused" },
+        { text: "Three times as many results to review, explain and defend. The code got cheap. The judgment didn't.", mood: "sceptical" },
         "Petra has the GPU budget. Meeting room.",
       ]);
     },
@@ -72,9 +72,10 @@ export const officeStory: Story = {
         left
           ? 'Tomas: "No node for efficiency. Fine. I\'ll make everyone else\'s runs 30% faster. For free, apparently."'
           : 'Tomas: "Distillation isn\'t exciting. But a small model that runs everywhere beats a huge one that never leaves the lab."',
+        left ? "guilty" : "neutral",
       );
     },
-    jonas: ({ ui }) => ui.dialogue.say('Jonas: "Chunked attention gets us to a million rows. I can feel it. The prior can too."'),
+    jonas: ({ ui }) => ui.dialogue.say('Jonas: "Chunked attention gets us to a million rows. I can feel it. The prior can too."', "amused"),
     rosa: ({ ui }) => avocados(ui),
     whiteboard: ({ ui }) => ui.dialogue.say('The whiteboard: "10K -> 1M rows. Text + tables. Fast enough to ship, not just to publish."'),
     async exit({ ui, world }) {

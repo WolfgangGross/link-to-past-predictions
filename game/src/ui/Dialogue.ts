@@ -2,15 +2,23 @@ import * as Phaser from "phaser";
 import { COLORS, WIDTH, textStyle } from "../theme";
 import { CONFIRM, DOWN, UP, nextKey } from "./keys";
 import { sfx } from "../audio";
+import { portraitKey, type Mood } from "./portraits";
 
 const BOX = { x: 16, y: 256, w: WIDTH - 32, h: 92, pad: 14 };
 const CHAR_MS = 18;
+const FACE = 120; // taller than the box: the portrait rises above its top edge
+const FACE_Y = BOX.h - 8 - FACE;
+const TEXT_X = 8 + FACE + 12;
+
+/** A line of text, optionally with its own expression for Ada. */
+export type Line = string | { text: string; mood: Mood };
 
 /** Zelda-style text box: typewriter lines and simple menus. */
 export class Dialogue {
   private readonly scene: Phaser.Scene;
   private readonly box: Phaser.GameObjects.Container;
   private readonly text: Phaser.GameObjects.Text;
+  private readonly face: Phaser.GameObjects.Image;
   private readonly more: Phaser.GameObjects.Triangle;
 
   constructor(scene: Phaser.Scene) {
@@ -18,10 +26,13 @@ export class Dialogue {
     const bg = scene.add.graphics();
     bg.fillStyle(COLORS.ink, 0.96).fillRoundedRect(0, 0, BOX.w, BOX.h, 6);
     bg.lineStyle(2, COLORS.paper, 1).strokeRoundedRect(1, 1, BOX.w - 2, BOX.h - 2, 6);
-    this.text = scene.add.text(BOX.pad, BOX.pad, "", textStyle(8, COLORS.paper, BOX.w - BOX.pad * 2));
+    bg.fillStyle(COLORS.ink, 1).fillRect(8, FACE_Y, FACE, FACE);
+    bg.lineStyle(2, COLORS.paper, 1).strokeRect(8, FACE_Y, FACE, FACE);
+    this.face = scene.add.image(8, FACE_Y, portraitKey("neutral")).setOrigin(0).setDisplaySize(FACE, FACE);
+    this.text = scene.add.text(TEXT_X, BOX.pad, "", textStyle(8, COLORS.paper, BOX.w - TEXT_X - BOX.pad));
     this.more = scene.add.triangle(BOX.w - 20, BOX.h - 14, 0, 0, 10, 0, 5, 6, COLORS.accent);
     scene.tweens.add({ targets: this.more, alpha: 0.2, duration: 400, yoyo: true, repeat: -1 });
-    this.box = scene.add.container(BOX.x, BOX.y, [bg, this.text, this.more]).setDepth(100).setVisible(false);
+    this.box = scene.add.container(BOX.x, BOX.y, [bg, this.face, this.text, this.more]).setDepth(100).setVisible(false);
   }
 
   /** Autopilot: returns the option to pick without asking, or undefined to ask the player. */
@@ -36,10 +47,12 @@ export class Dialogue {
     return this.box.visible;
   }
 
-  async say(lines: string | string[]): Promise<void> {
+  /** Ada's face for the lines that don't name their own mood. */
+  async say(lines: Line | Line[], mood: Mood = "neutral"): Promise<void> {
     this.box.setVisible(true);
     for (const line of Array.isArray(lines) ? lines : [lines]) {
-      await this.type(line);
+      this.show(typeof line === "string" ? mood : line.mood);
+      await this.type(typeof line === "string" ? line : line.text);
       this.more.setVisible(true);
       this.mode = "line";
       await nextKey(this.scene, CONFIRM);
@@ -50,8 +63,9 @@ export class Dialogue {
   }
 
   /** `initial` is the option the cursor starts on. `autoOverride` replaces yesterday's remembered pick when the autopilot is on. */
-  async choose(prompt: string, options: string[], initial = 0, autoOverride?: number): Promise<number> {
+  async choose(prompt: string, options: string[], initial = 0, autoOverride?: number, mood: Mood = "thinking"): Promise<number> {
     this.box.setVisible(true);
+    this.show(mood);
     this.more.setVisible(false);
     await this.type(prompt);
     const auto = this.autopick ? (autoOverride ?? this.autopick(prompt, options)) : undefined;
@@ -85,6 +99,11 @@ export class Dialogue {
     this.mode = "closed";
     this.onChoice?.(prompt, selected);
     return selected;
+  }
+
+  private show(mood: Mood): void {
+    // Portraits are pre-scaled to FACE px and shown 1:1. Resize on every swap: the UI scene is built before they load.
+    this.face.setTexture(portraitKey(mood)).setDisplaySize(FACE, FACE);
   }
 
   /** Types a line out; a confirm press skips to the full line. */

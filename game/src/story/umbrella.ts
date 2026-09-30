@@ -63,11 +63,12 @@ export async function pickUpPhone(ui: UIScene): Promise<void> {
     state.day > 0
       ? ["The phone is where you left it.", '"Good morning, Ada. I remember yesterday."', "(Press TAB to look at it.)"]
       : [
-          "Something on the nightstand is glowing...",
+          { text: "Something on the nightstand is glowing...", mood: "surprised" },
           "A phone? It isn't yours. The screen reads: IT'S DANGEROUS TO GO ALONE! TAKE THIS.",
           "You got the PHONE OF PRIORS! It knows the past. It predicts. It does not decide.",
           "(Press TAB to look at it.)",
         ],
+    state.day > 0 ? "sceptical" : "suspicious",
   );
   state.hasPhone = true;
   prefetchRain();

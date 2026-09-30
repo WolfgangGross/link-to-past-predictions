@@ -41,19 +41,19 @@ export async function talkToLeo(ui: UIScene): Promise<void> {
     await ui.dialogue.say(state.leoHome ? 'Leo: "Can I watch cartoons?" (Charles: "No.")' : 'Leo: "*sniff* Do I have to take the spelling test?"');
     return;
   }
-  await ui.dialogue.say([`Leo: "${s.said}..."`, ...(s.test_today ? ['Ada: "Spelling test today, huh?"', 'Leo: "...maybe."'] : [])]);
+  await ui.dialogue.say([`Leo: "${s.said}..."`, ...(s.test_today ? ['Ada: "Spelling test today, huh?"', 'Leo: "...maybe."'] : [])], "worried");
   if (!state.hasPhone) return;
 
   ui.setClock("07:05");
-  await ui.dialogue.say('Charles (from the kitchen): "School rule: any symptom, he stays home. And then one of us stays with him."');
+  await ui.dialogue.say('Charles (from the kitchen): "School rule: any symptom, he stays home. And then one of us stays with him."', "worried");
   const pick = await ui.dialogue.choose("Leo?", ["Follow the rule: Leo stays home", "Check his temperature, ask the phone"], 1);
   if (pick === 0) {
     decide(true, "rule");
-    await ui.dialogue.say("Leo stays home. Charles cancels his big meeting and sets up on the sofa.");
+    await ui.dialogue.say("Leo stays home. Charles cancels his big meeting and sets up on the sofa.", "guilty");
     return;
   }
 
-  await ui.dialogue.say(`The thermometer beeps: ${s.temperature_c.toFixed(1)} °C. Day ${s.days_since_onset} of the sniffles.`);
+  await ui.dialogue.say(`The thermometer beeps: ${s.temperature_c.toFixed(1)} °C. Day ${s.days_since_onset} of the sniffles.`, "worried");
   await ui.phone.open();
   const threshold = await ui.phone.dial("YOUR JUDGMENT", "Keep Leo home if the chance he's contagious is at least...", 30);
   ui.phone.thinking("IS LEO CONTAGIOUS?", "symptoms");
@@ -72,7 +72,7 @@ export async function talkToLeo(ui: UIScene): Promise<void> {
   ui.phone.showProbability("LEO IS CONTAGIOUS", actual, threshold, [
     `From ${result.trainRows} past school mornings, and from what Leo said.`,
   ]);
-  await ui.dialogue.say(`The phone says ${pct(actual)}. Your line is ${pct(threshold)}.`);
+  await ui.dialogue.say(`The phone says ${pct(actual)}. Your line is ${pct(threshold)}.`, "worried");
   ui.phone.showLines("WHAT MOVES IT", [
     `At ${hotTemp(s.temperature_c).toFixed(1)} °C: ${pct(hot)}`,
     `If he'd said "${GRUMPY}": ${pct(grumpy)}`,
@@ -91,16 +91,16 @@ export async function talkToLeo(ui: UIScene): Promise<void> {
     await ui.dialogue.say([
       `Charles: "${pct(actual)}? I'd keep him home at anything over ${pct(CHARLES_LINE)}."`,
       "Same number. Two different lines. The phone can't tell you whose line counts.",
-    ]);
+    ], "uneasy");
     const options = home ? ["Yours: Leo stays home", "Charles's: Leo goes to school"] : ["Yours: Leo goes to school", "Charles's: Leo stays home"];
-    const whose = await ui.dialogue.choose("Whose line wins?", options);
+    const whose = await ui.dialogue.choose("Whose line wins?", options, 0, undefined, "uneasy");
     if (whose === 1) home = samHome;
   } else {
     await ui.dialogue.say(home ? 'Charles: "Agreed. I\'ll stay with him."' : 'Charles: "Fine by me. Nurse checks him at the gate anyway."');
   }
   await ui.phone.close();
   decide(home, "prediction", threshold, actual);
-  await ui.dialogue.say(home ? "Leo stays home. Charles cancels his big meeting." : "Leo gets dressed. Spelling test it is.");
+  await ui.dialogue.say(home ? "Leo stays home. Charles cancels his big meeting." : "Leo gets dressed. Spelling test it is.", home ? "guilty" : "neutral");
   await ui.card.show(CARD);
 }
 

@@ -115,9 +115,9 @@ export async function allocateGpus(ui: UIScene): Promise<void> {
     leftOut.length ? `The ${leftOut.join(" and ")} team${leftOut.length > 1 ? "s get" : " gets"} nothing.` : "Every team gets one anyway.",
   ]);
   if (leftOut.includes("efficiency")) {
-    await ui.dialogue.say('Tomas (efficiency): "So a model decides now whose ideas get GPUs? My team built the inference stack it runs on."');
+    await ui.dialogue.say('Tomas (efficiency): "So a model decides now whose ideas get GPUs? My team built the inference stack it runs on."', "guilty");
   }
-  await ui.dialogue.say('Petra: "And I promised the board a tokenizer run. Can we squeeze it in?"');
+  await ui.dialogue.say('Petra: "And I promised the board a tokenizer run. Can we squeeze it in?"', "uneasy");
   const choice = await ui.dialogue.choose("Whose ranking wins?", [
     "The phone's top four",
     "The rule: one per team",

@@ -10,7 +10,7 @@ export const homeStory: Story = {
   sky: currentSky,
   async onEnter({ ui }) {
     ui.setClock("06:30");
-    await ui.dialogue.say(["06:30. The alarm. Again.", "Two kids, one paper deadline, zero coffee. Let's go."]);
+    await ui.dialogue.say(["06:30. The alarm. Again.", "Two kids, one paper deadline, zero coffee. Let's go."], "morning");
   },
   interact: {
     async nightstand({ ui }) {
@@ -34,7 +34,7 @@ export const homeStory: Story = {
       if (state.umbrellas === undefined) return ui.dialogue.say("Umbrellas or not? Better check the sky from the window first.");
       if (state.leoHome === undefined) return ui.dialogue.say("Leo is still in bed. Better check on him first.");
       if (!state.schoolRun) await schoolRun(ui);
-      await ui.dialogue.say(state.leoHome ? "Out the door with Mia. Leo waves from the window." : "Out the door with Mia and Leo.");
+      await ui.dialogue.say(state.leoHome ? "Out the door with Mia. Leo waves from the window." : "Out the door with Mia and Leo.", "neutral");
       world.goto("street");
     },
   },

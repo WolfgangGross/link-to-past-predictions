@@ -2,6 +2,7 @@ import * as Phaser from "phaser";
 import { CHARACTERS, SHEETS, SHEET_ORDER, charFrame, type Character, type Facing } from "../world/tiles";
 import { fakeMorning, state } from "../state";
 import { loadMemory } from "../memory";
+import { MOODS, portraitKey, portraitUrl } from "../ui/portraits";
 import type { UIScene } from "./UIScene";
 
 export class BootScene extends Phaser.Scene {
@@ -11,6 +12,7 @@ export class BootScene extends Phaser.Scene {
 
   preload(): void {
     for (const s of SHEET_ORDER) this.load.image(s, SHEETS[s].url);
+    for (const m of MOODS) this.load.image(portraitKey(m), portraitUrl(m));
     this.load.spritesheet("urban-sprites", SHEETS.urban.url, { frameWidth: 16, frameHeight: 16 });
   }
 

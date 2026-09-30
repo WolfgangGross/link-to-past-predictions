@@ -36,7 +36,7 @@ async function decideFinal(ui: UIScene): Promise<void> {
   await ui.dialogue.say([
     `Karim (physio): "Day ${MIA.days_since_sprain} after the sprain. ${SWELLING[MIA.swelling]}. ${PAIN(MIA.pain_reported)}${MIA.previous_sprains ? `. That's sprain number ${MIA.previous_sprains + 1} for her` : ""}."`,
     'Karim: "Kids always say that before a final. The club rule: NO MATCH WITHIN A WEEK OF A SPRAIN."',
-  ]);
+  ], "worried");
   const pick = await ui.dialogue.choose("Mia?", ["Follow the rule: she sits out", "Ask the phone"], 1);
   if (pick === 0) return play(ui, "sit", "rule");
 
@@ -63,7 +63,7 @@ async function decideFinal(ui: UIScene): Promise<void> {
     'Mia: "I\'d play even at fifty percent!"',
     'Coach Jansen: "Under forty, she plays. We need her up front."',
     `Charles (video call): "Anything over ten percent is too much. She's ${AGE_WORD[MIA.age]}."`,
-  ]);
+  ], "worried");
   const yours = await ui.phone.dial("YOUR LINE", "Mia plays if her reinjury risk is below...", 20, 5, "<");
   await ui.dialogue.say("One prediction. Four lines. The phone can't tell you whose preferences count.");
   const lines = { ...LINES, You: yours };
@@ -101,7 +101,12 @@ async function play(ui: UIScene, kind: "full" | "half" | "sit", choice: "rule" |
         : won
           ? [kind === "half" ? "Mia comes on for the second half..." : "Mia starts up front...", "...and scores the winner! 2-1. The ankle holds."]
           : [kind === "half" ? "Mia comes on for the second half." : "Mia plays the whole game.", "They lose 1-2. But the ankle holds, and she played."];
-  await ui.dialogue.say(story);
+  if (reinjured) {
+    await ui.dialogue.say(story[0], "panic");
+    await ui.dialogue.say(story.slice(1), "guilty");
+    return;
+  }
+  await ui.dialogue.say(story, kind === "sit" ? "uneasy" : won ? "success" : "neutral");
 }
 
 export const fieldStory: Story = {
@@ -117,7 +122,7 @@ export const fieldStory: Story = {
     },
     async mia({ ui }) {
       if (!state.final) return ui.dialogue.say('Mia: "It doesn\'t hurt. Much. Can I play? PLEASE?"');
-      await ui.dialogue.say(state.final.reinjured ? 'Mia: "*sniff* It was worth it. Maybe."' : 'Mia: "Can we get pizza?"');
+      await ui.dialogue.say(state.final.reinjured ? 'Mia: "*sniff* It was worth it. Maybe."' : 'Mia: "Can we get pizza?"', state.final.reinjured ? "guilty" : "amused");
     },
     coach: ({ ui }) => ui.dialogue.say('Coach Jansen: "Finals are finals. But she\'s your kid."'),
     kid1: ({ ui }) => ui.dialogue.say('"Is Mia playing? She\'s our best striker!"'),
