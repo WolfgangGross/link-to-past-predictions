@@ -3,6 +3,7 @@ import { COLORS, HEIGHT, WIDTH, css, textStyle } from "../theme";
 import { CONFIRM, nextKey } from "../ui/keys";
 import { state } from "../state";
 import { music, sfx } from "../audio";
+import { playIntro } from "../ui/IntroVideo";
 
 export class TitleScene extends Phaser.Scene {
   constructor() {
@@ -25,8 +26,14 @@ export class TitleScene extends Phaser.Scene {
     this.tweens.add({ targets: start, alpha: 0.2, duration: 600, yoyo: true, repeat: -1 });
     this.rainbowSwipe(cx, HEIGHT - 28, "Predictions live from TabPFN-3.5");
 
-    void nextKey(this, CONFIRM).then(() => {
+    void nextKey(this, CONFIRM).then(async () => {
       sfx.win();
+      if (state.day === 0) {
+        music.play(undefined);
+        await playIntro("assets/intro.mp4");
+        this.scene.start("world", { map: "home" });
+        return;
+      }
       this.cameras.main.fadeOut(300, 14, 14, 18);
       this.cameras.main.once("camerafadeoutcomplete", () => this.scene.start("world", { map: "home" }));
     });
